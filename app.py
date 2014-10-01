@@ -52,10 +52,15 @@ def generate():
     client = OverviewAPI(requests, params["server"], params["apiToken"])
     docs   = client.get_documents(params["documentSetId"])
     term_frequency_map = Counter()
+    term_df = Counter()
 
     for doc_id in docs:
+        doc_tokens = set()
         for token in get_tokens(docs[doc_id]):
             term_frequency_map[token] += 1
+            if token not in doc_tokens
+                doc_tokens.add(token)
+                term_df[token] += 1
 
     # keep only the top terms
     term_frequency_map = get_top_terms(term_frequency_map, 500)
