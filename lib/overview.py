@@ -18,6 +18,7 @@ class OverviewAPI(object):
         kwargs = {"headers":headers} 
         if method not in ["get", "delete"]:
             kwargs["data"] = body
+            kwargs["headers"]["content-type"] = "application/json"
 
         return requester((self.host + '/api/v1' + path), **kwargs)
 
@@ -38,5 +39,4 @@ class OverviewAPI(object):
     def save_viz_data(self, viz_id, title, data):
         r = self.request("put", "/vizs/" + str(viz_id), 
                          json.dumps({"title": title, 'json': data}))
-        print self.api_token_encoded
         return 200 <= r.status_code < 300
