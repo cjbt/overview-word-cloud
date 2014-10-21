@@ -22,15 +22,15 @@ app.get('/generate', function(req, res, next) {
     .node("pagination.total", function(total) {
       docSetSize = total;
       incrementSize = Math.floor(total/5);
-      tilNextRender = incrementSize;
+      tilNextRender = incrementSize + (docSetSize % (5*incrementSize));
       res.write('[');
     })
     .node('items.*', function(doc){
       cloud.processDocument(doc.text);
       tilNextRender--;
       if(tilNextRender==0) {
-        res.write(JSON.stringify(cloud.getTopTokens(150, Heap)));
         renderNumber++;
+        res.write(JSON.stringify(cloud.getTopTokens(150, Heap)));
         if(renderNumber!=5) {
           res.write(', ');
         }
@@ -39,6 +39,14 @@ app.get('/generate', function(req, res, next) {
       return oboe.drop;
     })
     .done(function() {
+      //Special case: our render logic above assumed we had at least 5 doc.
+      //if that wasn't the case, we didn't render anything, so do so now in
+      //our standard 5-item format (for a simpler client).
+      if(docSetSize < 5) {
+        var json = JSON.stringify(cloud.getTopTokens(150, Heap));
+        res.write([json, json, json, json, json].join(',')); 
+      }
+
       res.write(']');
       res.end();
     });
