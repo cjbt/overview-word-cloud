@@ -1,0 +1,57 @@
+doctype html
+html(lang="en", class="no-js")
+  head
+    meta(charset="utf-8")
+    meta(http-equiv="X-UA-Compatible", content="IE=edge")
+    style.
+      * { margin: 0; padding: 0; }
+    
+      progress {
+        position: absolute;
+         width: 200px;
+         left: 50%;
+         margin-left: -100px;
+         top: 50%;
+         margin-top: -20px;
+      }
+
+  body
+    #cloud-container
+      progress(max="1.0")
+
+    //- Using almond.js or similar could make the below a bit faster,
+    //- but it would require us to not load jquery from a cdn.
+    script(src="/static/js/modernizr.custom.js")
+    script.
+      Modernizr.load([{
+        load: '//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js',
+        complete: function() {
+          if(!window.jQuery) {
+            Modernizr.load('/static/js/jquery-2.1.1.min.js');
+          }
+        }
+      }, {
+        test: Modernizr.progressbar,
+        nope: ['/static/js/progress-polyfill.min.js', '/static/css/progress-polyfill.css']
+      }, {
+        load: ['/static/js/oboe-browser.min.js']
+      }, {
+        load: ['/static/js/d3.v3.min.js', '/static/js/d3.layout.cloud.js']
+      }, {
+        load: ['/static/js/app.js'],
+        complete: function() {
+          var queryParams = (function() {
+            var queryParams = {};
+            var paramStrings = window.location.search.substring(1).split("&");
+            paramStrings.forEach(function(paramString) {
+              var pair = paramString.split('='); 
+              queryParams[pair[0]] = decodeURIComponent(pair[1]); 
+            })
+            return queryParams;
+          }());
+
+          var paramString = window.location.search.substring(1);
+
+          App(oboe, jQuery, d3, d3.layout.cloud.bind(d3.layout), paramString);                    
+        }
+      }])
