@@ -12,9 +12,9 @@ var url       = require('url')
 
 app.get('/generate', function(req, res, next) {
   var api = new API(req.query.server, req.query.vizId, req.query.apiToken)
-    , docStream = api.getAllDocuments(oboe, req.query.documentSetId)
     , cloud = new WordCloud()
     , docSetSize, incrementSize, tilNextRender, renderNumber = 0;
+    , docStream = api.getAllDocuments(oboe, req.query.documentSetId, "random")
 
   res.header('Content-Type', 'application/json');
 
