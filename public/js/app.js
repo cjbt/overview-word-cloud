@@ -6,13 +6,11 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
 
   //a function setting up d3 cloud to implement
   //my informal "renderer" interface.
-  var cloudDrawer = function(container, size, topTokens) {
-    //this is sorta arbitrary, but it works.
-    var scaler = topTokens.reduce(function(old, curr) { 
-        return old + curr[1]; 
-      }, 0)/(size[0]*4);
-
-    var fill = d3.scale.category20b();
+  var drawCloud = function(container, size, topTokens) {
+    //this scaler is sorta arbitrary, but it works.
+    //It grows linearly w/ docCount, which we expect the tfs to do as well.
+    var scaler = topTokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4)
+      , fontStack = 'Palatino, "Palatino Linotype", "Palatino LT STD", "Book Antiqua", "Trebuchet MS", serif';
 
     container.style.width = size[0] + 'px';
     container.style.height = size[1] + 'px';
@@ -25,7 +23,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
       .padding(3)
       .timeInterval(10)
       .rotate(function() { return 0; })
-      .font("'Palatino', 'Palatino Linotype', Trebuchet MS'")
+      .font(fontStack)
       .fontSize(function(d) { return d.size; })
       .on("end", function(words) {
         d3.select(container).append('svg')
@@ -37,7 +35,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
           .data(words)
         .enter().append("text")
           .style("font-size", function(d) { return d.size + "px"; })
-          .style("font-family", "'Palatino', 'Palatino Linotype', Trebuchet MS'")
+          .style("font-family", fontStack)
           .style("fill", function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; })
           .attr("text-anchor", "middle")
           .attr("transform", function(d) {
@@ -56,33 +54,36 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
     this.$window = $window;
     this.$container = $container;
     this.$progress = $container.find('progress').eq(0);
+    this.latestData = {}
 
     DataStreamer()
       .node("![*]", function(data) {
         i++;
-        self.updateProgress();
-        if(i % 2 == 0) {
-          self.render(data);
+        self.updateProgress(data.progress);
+        if(i % 2 == 1) {
+          self.render(data.tokens);
         }
+        self.latestData = data.tokens;
+        return oboe.drop;
       })
-      .done(function(finalData) {
+      .done(function() {
         var resizeTimer;
-        
-        function render() {
-          self.render(finalData[finalData.length-1]);
+        var render = function() {
+          self.render(self.latestData);
         };
-        
+
         $window.resize(function() {
           clearTimeout(resizeTimer);
-          resizeTimer = setTimeout(render, 80);
+          resizeTimer = setTimeout(render, 100);
         });
-        self.$progress.remove();
+
         render();
+        self.$progress.remove();
       })
   }
 
-  OverviewWordCloud.prototype.updateProgress = function() {
-    this.progress += .2;
+  OverviewWordCloud.prototype.updateProgress = function(newProgress) {
+    this.progress = newProgress;
     this.$progress.attr('value', this.progress);
   }
 
@@ -96,5 +97,5 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
   };
 
   //init
-  new OverviewWordCloud($(window), $('#cloud-container'), cloudDrawer, getWordCloudData);
+  new OverviewWordCloud($(window), $('#cloud-container'), drawCloud, getWordCloudData);
 };
