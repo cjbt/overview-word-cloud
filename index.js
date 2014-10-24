@@ -35,7 +35,7 @@ app.get('/generate', function(req, res, next) {
 
       //special case: initially, populate oldVector from the first doc.
       if(!oldVector) {
-        oldVector = tfdfArrayToTfMap(counter.getTopTokens(150, Heap));
+        oldVector = tfdfArrayToTfMap(counter.getTopTokens(150, Heap)) || {'a': 1};
       }
 
       //after processing incrementSize docs...
