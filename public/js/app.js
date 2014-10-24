@@ -83,8 +83,10 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
   }
 
   OverviewWordCloud.prototype.updateProgress = function(newProgress) {
-    this.progress = newProgress;
-    this.$progress.attr('value', this.progress);
+    if(newProgress > this.progress) {
+      this.progress = newProgress;
+      this.$progress.attr('value', this.progress);
+    }
   }
 
   OverviewWordCloud.prototype.render = function(topTokens) {
