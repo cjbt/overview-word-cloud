@@ -94,7 +94,7 @@ app.listen(3000); //we'll figure out https on deployment.
 function computeProgress(priorSimilarities) {
   var measurementCount = priorSimilarities.length
     , lastMeasurement  = priorSimilarities[measurementCount - 1]
-    , oneMinusSimilarities, baseVal
+    , oneMinusSimilarities, baseVal, projectDecayFromCount
     , projectedDecayRate = 0, remainingIterations = 1;
 
   //we mark the progress as complete (return 1), when 
@@ -121,22 +121,12 @@ function computeProgress(priorSimilarities) {
   oneMinusSimilarities = priorSimilarities.map(function(it) { return 1 - it; });
 
   //Now we project the future decay rate (semi-arbitrarily) as a
-  //weighted average of the prior three decays. (Or, if we don't have 
+  //weighted average of the prior four decays. (Or, if we don't have 
   //three prior decays, of however many we do have.)
-  switch(measurementCount) {
-    case 2:
-    case 3:
-      for(var i = 1; i < measurementCount; i++) {
-        projectedDecayRate += 
-          (oneMinusSimilarities[i]/oneMinusSimilarities[i-1])/(measurementCount-1);
-      }
-      break;
-
-    default:
-      projectedDecayRate = 
-        .33*(oneMinusSimilarities[1]/oneMinusSimilarities[0]) + 
-        .33*(oneMinusSimilarities[2]/oneMinusSimilarities[1]) +
-        .34*(oneMinusSimilarities[3]/oneMinusSimilarities[2]);
+  projectDecayFromCount = Math.min(5, measurementCount);
+  for(var i = 1; i < projectDecayFromCount; i++) {
+    projectedDecayRate += 
+      (oneMinusSimilarities[i]/oneMinusSimilarities[i-1])/(projectDecayFromCount-1);
   }
 
   //and we estimate the number of remaining
