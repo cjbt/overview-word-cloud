@@ -23,7 +23,7 @@ app.get('/generate', function(req, res, next) {
   docStream
     .node("pagination.total", function(total) {
       docSetSize = total;
-      incrementSize = Math.min(500, Math.max(100, docSetSize*.02));
+      incrementSize = Math.min(500, Math.max(100, Math.floor(docSetSize*.02)));
       tilNextRender = incrementSize + (docSetSize % incrementSize);
       res.write('[');
     })
