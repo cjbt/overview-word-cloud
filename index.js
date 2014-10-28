@@ -12,7 +12,7 @@ var url                = require('url')
   , app                = express();
 
 app.get('/generate', function(req, res, next) {
-  var api = new API(req.query.server, req.query.vizId, req.query.apiToken)
+  var api = new API(req.query.server, req.query.apiToken)
     , docStream = api.getAllDocuments(oboe, req.query.documentSetId, "random")
     , counter = new DocSetTokenCounter()
     , docSetSize, incrementSize = 100, tilNextRender
