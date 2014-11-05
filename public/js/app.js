@@ -6,7 +6,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
 
   //a function setting up d3 cloud to implement
   //my informal "renderer" interface.
-  var drawCloud = function(container, size, topTokens) {
+  var drawCloud = function(container, size, topTokens, percentComplete) {
     //this scaler is sorta arbitrary, but it works.
     //It grows linearly w/ docCount, which we expect the tfs to do as well.
     var scaler = topTokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4)
@@ -29,7 +29,10 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
       .on("end", function(words) {
         d3.select(container).append('svg')
           .attr("width", size[0])
-          .attr("height", size[1])
+          .attr("height", size[1])          
+          .style('transform', 'scale('+ percentComplete + ')')
+          .style('filter', 'grayscale('+ (1 - percentComplete) + ')')
+          .style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')')
         .append("g")
           .attr("transform", "translate(" + [size[0] >> 1, size[1] >> 1] + ")")
         .selectAll("text")
@@ -93,7 +96,8 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
     this.renderer(
       this.$container[0],
       [parseInt(this.$window.width(), 10), parseInt(this.$window.height(), 10)], 
-      topTokens
+      topTokens,
+      this.progress
     );
   };
 
