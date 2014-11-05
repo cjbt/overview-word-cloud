@@ -106,7 +106,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
         self.$progress.remove();
       })
 
-    jQuery('body').click(function(e) {
+    jQuery('html').click(function(e) {
       clickListener.apply(this, [e, self.$container]);
     });
   }
