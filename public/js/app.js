@@ -1,5 +1,7 @@
 var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
 
+  var $window = jQuery(window);
+
   var getWordCloudData = function() {
     return oboe('/generate?' + paramString);
   }
@@ -50,8 +52,29 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
       .start();
   }
 
+  function handleClick(e, $container) {
+    var $target = $(e.target), center, offset;
+
+    if(e.target.tagName.toLowerCase() !== 'text') {
+      alert('all words deselected');
+      $container.animate({'margin-top': 0, 'margin-left': 0, 'transform': 'scale(1)'}, 400)
+    }
+    else {
+      center = [$window.width()/2, $window.height()/2];
+      offset = $target.offset();
+
+      $container.animate({
+        'marginTop': '+=' + (center[1] - offset['top'] - $target.height()/2),
+        'marginLeft': '+=' + (center[0] - offset['left'] - $target.width()/2),
+        'transform': 'scale(1.6)'
+      }, 500);
+
+      alert('selected: ' + e.target.textContent);
+    }
+  }
+
   //OverviewWordCloud "class"
-  var OverviewWordCloud = function($window, $container, renderer, DataStreamer) {
+  var OverviewWordCloud = function($window, $container, renderer, clickListener, DataStreamer) {
     var self = this, i = 0;
     this.progress = 0;
     this.renderer = renderer;
@@ -82,6 +105,10 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
         render();
         self.$progress.remove();
       })
+
+    jQuery('body').click(function(e) {
+      clickListener.apply(this, [e, self.$container]);
+    });
   }
 
   OverviewWordCloud.prototype.updateProgress = function(newProgress) {
@@ -102,5 +129,5 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
   };
 
   //init
-  new OverviewWordCloud($(window), $('#cloud-container'), drawCloud, getWordCloudData);
+  new OverviewWordCloud($window, jQuery('#cloud-container'), drawCloud, handleClick, getWordCloudData);
 };
