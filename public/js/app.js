@@ -58,7 +58,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
     if(e.target.tagName.toLowerCase() !== 'text') {
       window.parent.postMessage({
         call: 'setDocumentListParams',
-        args: [{}]
+        args: [{name: 'in document set'}]
       }, server);
 
       $container.animate({'margin-top': 0, 'margin-left': 0, 'transform': 'scale(1)'}, 400)
