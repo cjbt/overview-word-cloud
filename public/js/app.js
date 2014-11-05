@@ -1,4 +1,4 @@
-var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
+var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
 
   var $window = jQuery(window);
 
@@ -53,15 +53,20 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
   }
 
   function handleClick(e, $container) {
-    var $target = $(e.target), center, offset;
+    var $target = $(e.target), center, offset, term;
 
     if(e.target.tagName.toLowerCase() !== 'text') {
-      alert('all words deselected');
+      window.parent.postMessage({
+        call: 'setDocumentListParams',
+        args: [{}]
+      }, server);
+
       $container.animate({'margin-top': 0, 'margin-left': 0, 'transform': 'scale(1)'}, 400)
     }
     else {
       center = [$window.width()/2, $window.height()/2];
       offset = $target.offset();
+      term = e.target.textContent;
 
       $container.animate({
         'marginTop': '+=' + (center[1] - offset['top'] - $target.height()/2),
@@ -69,7 +74,10 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
         'transform': 'scale(1.6)'
       }, 500);
 
-      alert('selected: ' + e.target.textContent);
+      window.parent.postMessage({
+        call: 'setDocumentListParams',
+        args: [{q: term, name: 'with the word ' +  term}]
+      }, server);
     }
   }
 
