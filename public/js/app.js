@@ -102,23 +102,19 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
     DataStreamer()
       .node("![*]", function(data) {
         i++;
-        self.updateProgress(data.progress);
-        self.render(data.tokens);
         self.latestData = data.tokens;
+        self.updateProgress(data.progress);
+        self.render();
         return oboe.drop;
       })
       .done(function() {
-        var resizeTimer;
-        var render = function() {
-          self.render(self.latestData);
-        };
+        var resizeTimer, render = self.render.bind(self);
 
         $window.resize(function() {
           clearTimeout(resizeTimer);
           resizeTimer = setTimeout(render, 100);
         });
 
-        render();
         self.$progress.remove();
       })
 
@@ -134,12 +130,12 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
     }
   }
 
-  OverviewWordCloud.prototype.render = function(topTokens) {
-    this.$container.children().remove('svg,canvas');
+  OverviewWordCloud.prototype.render = function() {
+    this.$container.find('#cloud').remove();
     this.renderer(
       this.$container[0],
       [parseInt(this.$window.width(), 10), parseInt(this.$window.height(), 10)], 
-      topTokens,
+      this.latestData,
       this.progress
     );
   };
