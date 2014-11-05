@@ -1,16 +1,19 @@
 var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
 
+  var $window = jQuery(window);
+
   var getWordCloudData = function() {
     return oboe('/generate?' + paramString);
   }
 
   //a function setting up d3 cloud to implement
   //my informal "renderer" interface.
-  var drawCloud = function(container, size, topTokens) {
+  var drawCloud = function(container, size, topTokens, percentComplete) {
     //this scaler is sorta arbitrary, but it works.
     //It grows linearly w/ docCount, which we expect the tfs to do as well.
     var scaler = topTokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4)
-      , fontStack = 'Palatino, "Palatino Linotype", "Palatino LT STD", "Book Antiqua", "Trebuchet MS", serif';
+      , fontStack = '"Open Sans", Helvetica, Arial, sans-serif'
+      , tokenMapper, singleSize;
 
     container.style.width = size[0] + 'px';
     container.style.height = size[1] + 'px';
@@ -20,7 +23,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
       .words(topTokens.map(function(d) { 
         return {'text': d[0], 'size': d[1]/scaler}; 
       }))
-      .padding(3)
+      .padding(4)
       .timeInterval(10)
       .rotate(function() { return 0; })
       .font(fontStack)
@@ -28,7 +31,10 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
       .on("end", function(words) {
         d3.select(container).append('svg')
           .attr("width", size[0])
-          .attr("height", size[1])
+          .attr("height", size[1])          
+          .style('transform', 'scale('+ percentComplete + ')')
+          .style('filter', 'grayscale('+ (1 - percentComplete) + ')')
+          .style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')')
         .append("g")
           .attr("transform", "translate(" + [size[0] >> 1, size[1] >> 1] + ")")
         .selectAll("text")
@@ -46,8 +52,29 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
       .start();
   }
 
+  function handleClick(e, $container) {
+    var $target = $(e.target), center, offset;
+
+    if(e.target.tagName.toLowerCase() !== 'text') {
+      alert('all words deselected');
+      $container.animate({'margin-top': 0, 'margin-left': 0, 'transform': 'scale(1)'}, 400)
+    }
+    else {
+      center = [$window.width()/2, $window.height()/2];
+      offset = $target.offset();
+
+      $container.animate({
+        'marginTop': '+=' + (center[1] - offset['top'] - $target.height()/2),
+        'marginLeft': '+=' + (center[0] - offset['left'] - $target.width()/2),
+        'transform': 'scale(1.6)'
+      }, 500);
+
+      alert('selected: ' + e.target.textContent);
+    }
+  }
+
   //OverviewWordCloud "class"
-  var OverviewWordCloud = function($window, $container, renderer, DataStreamer) {
+  var OverviewWordCloud = function($window, $container, renderer, clickListener, DataStreamer) {
     var self = this, i = 0;
     this.progress = 0;
     this.renderer = renderer;
@@ -60,9 +87,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
       .node("![*]", function(data) {
         i++;
         self.updateProgress(data.progress);
-        if(i % 2 == 1) {
-          self.render(data.tokens);
-        }
+        self.render(data.tokens);
         self.latestData = data.tokens;
         return oboe.drop;
       })
@@ -80,11 +105,17 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
         render();
         self.$progress.remove();
       })
+
+    jQuery('body').click(function(e) {
+      clickListener.apply(this, [e, self.$container]);
+    });
   }
 
   OverviewWordCloud.prototype.updateProgress = function(newProgress) {
-    this.progress = newProgress;
-    this.$progress.attr('value', this.progress);
+    if(newProgress > this.progress) {
+      this.progress = newProgress;
+      this.$progress.attr('value', this.progress);
+    }
   }
 
   OverviewWordCloud.prototype.render = function(topTokens) {
@@ -92,10 +123,11 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
     this.renderer(
       this.$container[0],
       [parseInt(this.$window.width(), 10), parseInt(this.$window.height(), 10)], 
-      topTokens
+      topTokens,
+      this.progress
     );
   };
 
   //init
-  new OverviewWordCloud($(window), $('#cloud-container'), drawCloud, getWordCloudData);
+  new OverviewWordCloud($window, jQuery('#cloud-container'), drawCloud, handleClick, getWordCloudData);
 };
