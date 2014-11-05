@@ -10,7 +10,8 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
     //this scaler is sorta arbitrary, but it works.
     //It grows linearly w/ docCount, which we expect the tfs to do as well.
     var scaler = topTokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4)
-      , fontStack = 'Palatino, "Palatino Linotype", "Palatino LT STD", "Book Antiqua", "Trebuchet MS", serif';
+      , fontStack = '"Open Sans", Helvetica, Arial, sans-serif'
+      , tokenMapper, singleSize;
 
     container.style.width = size[0] + 'px';
     container.style.height = size[1] + 'px';
@@ -20,7 +21,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
       .words(topTokens.map(function(d) { 
         return {'text': d[0], 'size': d[1]/scaler}; 
       }))
-      .padding(3)
+      .padding(4)
       .timeInterval(10)
       .rotate(function() { return 0; })
       .font(fontStack)
