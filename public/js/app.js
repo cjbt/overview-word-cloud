@@ -29,25 +29,33 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
       .font(fontStack)
       .fontSize(function(d) { return d.size; })
       .on("end", function(words) {
-        d3.select(container).append('svg')
+        var svg = d3.select(container).append('svg')
           .attr("width", size[0])
-          .attr("height", size[1])          
-          .style('transform', 'scale('+ percentComplete + ')')
-          .style('filter', 'grayscale('+ (1 - percentComplete) + ')')
-          .style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')')
-        .append("g")
-          .attr("transform", "translate(" + [size[0] >> 1, size[1] >> 1] + ")")
-        .selectAll("text")
-          .data(words)
-        .enter().append("text")
-          .style("font-size", function(d) { return d.size + "px"; })
-          .style("font-family", fontStack)
-          .style("fill", function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; })
-          .attr("text-anchor", "middle")
-          .attr("transform", function(d) {
-            return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
-          })
-          .text(function(d) { return d.text; });
+          .attr("height", size[1]);
+
+          //chrome blurs elements with filters on retina displays, so don't apply
+          //the filters to the final wordcloud (where they don't make sense anyway)
+          if(percentComplete !== 1) {
+            svg = svg
+              .style('transform', 'scale('+ percentComplete + ')')
+              .style('filter', 'grayscale('+ (1 - percentComplete) + ')')
+              .style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')')
+          }
+          
+        svg
+          .append("g")
+            .attr("transform", "translate(" + [size[0] >> 1, size[1] >> 1] + ")")
+          .selectAll("text")
+            .data(words)
+          .enter().append("text")
+            .style("font-size", function(d) { return d.size + "px"; })
+            .style("font-family", fontStack)
+            .style("fill", function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; })
+            .attr("text-anchor", "middle")
+            .attr("transform", function(d) {
+              return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+            })
+            .text(function(d) { return d.text; });
       })
       .start();
   }
