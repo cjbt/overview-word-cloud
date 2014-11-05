@@ -61,9 +61,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString) {
       .node("![*]", function(data) {
         i++;
         self.updateProgress(data.progress);
-        if(i % 2 == 1) {
-          self.render(data.tokens);
-        }
+        self.render(data.tokens);
         self.latestData = data.tokens;
         return oboe.drop;
       })
