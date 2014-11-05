@@ -29,9 +29,11 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
       .font(fontStack)
       .fontSize(function(d) { return d.size; })
       .on("end", function(words) {
-        var svg = d3.select(container).append('svg')
-          .attr("width", size[0])
-          .attr("height", size[1]);
+        var oldClouds = d3.select('#cloud') 
+          , svg = d3.select(container).append('svg')
+              .attr("width", size[0])
+              .attr('id', 'cloud')
+              .attr("height", size[1]);
 
           //chrome blurs elements with filters on retina displays, so don't apply
           //the filters to the final wordcloud (where they don't make sense anyway)
@@ -56,6 +58,9 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
               return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
             })
             .text(function(d) { return d.text; });
+
+        oldClouds.remove();
+
       })
       .start();
   }
@@ -115,6 +120,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
           resizeTimer = setTimeout(render, 100);
         });
 
+        render();
         self.$progress.remove();
       })
 
@@ -131,7 +137,6 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
   }
 
   OverviewWordCloud.prototype.render = function() {
-    this.$container.find('#cloud').remove();
     this.renderer(
       this.$container[0],
       [parseInt(this.$window.width(), 10), parseInt(this.$window.height(), 10)], 
