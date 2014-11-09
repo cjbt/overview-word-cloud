@@ -12,8 +12,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
     //this scaler is sorta arbitrary, but it works.
     //It grows linearly w/ docCount, which we expect the tfs to do as well.
     var scaler = topTokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4)
-      , fontStack = '"Open Sans", Helvetica, Arial, sans-serif'
-      , tokenMapper, singleSize;
+      , fontStack = '"Open Sans", Helvetica, Arial, sans-serif';
 
     container.style.width = size[0] + 'px';
     container.style.height = size[1] + 'px';
