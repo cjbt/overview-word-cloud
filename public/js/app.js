@@ -56,7 +56,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
               .style("fill", function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; })
               .attr("text-anchor", "middle")
               .attr("transform", function(d) {
-                return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+                return "translate(" + [d.x, d.y] + ")";
               })
               .text(function(d) { return d.text; });
 
@@ -67,34 +67,69 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     });
   }
 
-  function handleClick(e, $container) {
-    var $target = $(e.target), center, offset, term;
+  var handleClick = (function () {
+    //state to track between clicks, stored in a closure.
+    var oldMarginTop = 0, oldMarginLeft = 0, oldScaleFactor = 1;
 
-    if(e.target.tagName.toLowerCase() !== 'text') {
-      window.parent.postMessage({
-        call: 'setDocumentListParams',
-        args: [{name: 'in document set'}]
-      }, server);
+    return function(e, $container) {
+      var $target = $(e.target), term, termRect, windowWidth, windowCenter
+        , marginTop, marginLeft, scaleFactor, scaleChange;
 
-      $container.animate({'margin-top': 0, 'margin-left': 0, 'transform': 'scale(1)'}, 400)
+      if(e.target.tagName.toLowerCase() !== 'text') {  
+        window.parent.postMessage({
+          call: 'setDocumentListParams',
+          args: [{name: 'in document set'}]
+        }, server);
+
+        $container
+          .removeClass('with-selection')
+          .css({
+            'transform': 'scale(1)',
+            'margin-top': 0, 
+            'margin-left': 0
+          }).find('.active').attr('class', '');
+      }
+
+      else {
+        //postMessage first, so overview can start searching.
+        term = e.target.textContent;
+        window.parent.postMessage({
+          call: 'setDocumentListParams',
+          args: [{q: term, name: 'with the word ' +  term}]
+        }, server);
+
+        //calculate the new scaleFactor
+        windowWidth = $window.width(); 
+        windowCenter = [windowWidth/2, $window.height()/2];
+        termRect     = $target.get(0).getBoundingClientRect();
+        scaleFactor = Math.min(3, Math.max(1, (windowWidth/termRect.width * .5)));
+
+        //position logic, adjusting for the change in scaleFactor
+        scaleChange  = (scaleFactor/oldScaleFactor);
+        marginTop    = windowCenter[1] - (termRect.top - oldMarginTop)*scaleChange - (termRect.height*scaleChange)/2;
+        marginLeft   = windowCenter[0] - (termRect.left - oldMarginLeft)*scaleChange - (termRect.width*scaleChange)/2;
+
+        //manage classes. can't use $target.addClass()
+        //because .className works differently in SVG
+        $container.find('.active').removeAttr('class')
+        $target.attr('class', 'active');
+        
+        //start the animation
+        $container
+          .addClass('with-selection')
+          .css({
+            'transform': 'scale(' + scaleFactor + ')',
+            'marginTop': marginTop + 'px',
+            'marginLeft': marginLeft + 'px'
+          });
+
+        //update oldX variables for next time
+        oldScaleFactor = scaleFactor;
+        oldMarginTop = marginTop;
+        oldMarginLeft = marginLeft;
+      }
     }
-    else {
-      center = [$window.width()/2, $window.height()/2];
-      offset = $target.offset();
-      term = e.target.textContent;
-
-      $container.animate({
-        'marginTop': '+=' + (center[1] - offset['top'] - $target.height()/2),
-        'marginLeft': '+=' + (center[0] - offset['left'] - $target.width()/2),
-        'transform': 'scale(1.6)'
-      }, 500);
-
-      window.parent.postMessage({
-        call: 'setDocumentListParams',
-        args: [{q: term, name: 'with the word ' +  term}]
-      }, server);
-    }
-  }
+  }());
 
   //OverviewWordCloud "class"
   var OverviewWordCloud = function($window, $container, renderer, clickListener, DataStreamer) {

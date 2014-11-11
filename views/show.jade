@@ -13,6 +13,31 @@ html(lang="en", class="no-js")
          left: 10px;
       }
 
+      body {
+        -webkit-transform:translate3d(0,0,0);
+      }
+
+      #cloud-container {
+        -webkit-transform-origin: 0% 0%;
+        -webkit-transition-duration: .5s;
+        -webkit-transition-property: -webkit-transform, margin-top, margin-left;
+        -webkit-transition-timing-function: cubic-bezier(.02, .01, .47, 1);
+
+        transform-origin: 0% 0%;
+        transition-duration: .5s;
+        transition-property: transform, margin-top, margin-left;
+        transition-timing-function: ease;
+      }
+
+      text {
+        -webkit-transition: fill .5s;
+        transition: fill .5s;
+      }
+
+      .with-selection text:not(.active) {
+        fill: #cfcfcf !important;
+      }
+
   body
     #cloud-container
       progress(max="1.0", value="0")
