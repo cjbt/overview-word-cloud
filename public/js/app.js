@@ -47,33 +47,27 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     }
   }
 
-  OverviewWordCloud.prototype.includeWords = function(words) {
+  OverviewWordCloud.prototype.changeIncludedWords = function(include, exclude) {
     var self = this;
-    words.forEach(function(it) {
+
+    (include || []).forEach(function(it) {
       if(it in self.excludedWords) {
         self.includedWords[it] = self.excludedWords[it];
         delete self.excludedWords[it];
       }
     });
-    dispatch(
-      "inclusionchange", 
-      this.listeners,
-      this, [words, this.includedWords, this.excludedWords]
-    );
-  }
 
-  OverviewWordCloud.prototype.excludeWords = function(words) {
-    var self = this;
-    words.forEach(function(it) {
+    (exclude || []).forEach(function(it) {
       if(it in self.includedWords) {
         self.excludedWords[it] = self.includedWords[it];
         delete self.includedWords[it];
       }
     });
+
     dispatch(
       "inclusionchange", 
       this.listeners,
-      this, [words, this.includedWords, this.excludedWords]
+      this, [this.includedWords, this.excludedWords, include, exclude]
     );
   }
 
