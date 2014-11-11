@@ -1,5 +1,85 @@
 var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDonePromise) {
 
+  //A flight style component; just bound to dom nodes and handling its own events
+  var ChipList = function($container, id) {
+    var self = this;
+    this.id = id;
+    this.listeners = {};
+    this.$container = $('<ul id="chiplist-'+ id + '" class="chipList"></ul>');
+    this.$container.appendTo($container);
+
+    this.$container.selectonic({
+      multi: true,
+      keyboard: true,
+      focusBlur: true,
+      selectionBlur: true,
+      select: function(e, ui) {
+        //focusing the new selected elm to allow for consecutive deletes
+        ui.items.eq(0).focus();
+      }
+    })
+
+    this.$container.click(function(e) {
+      var $target = $(e.target), selected, prevLI;
+      if($target.hasClass('delete')) {
+        var selected  = self.$container.selectonic("getSelected")
+           , prevLI   = selected.eq(0).prev('li')
+           , toSelect;
+
+        self.delete($target.parent('li').get(0));
+        toSelect  = prevLI.length ? prevLI : self.$container.find('li').eq(0);
+        self.$container.selectonic('select', toSelect);
+      }
+    });
+
+    this.$container.keydown(function(e) {
+      switch(e.which) {
+        case 8: //delete
+          e.preventDefault();
+          var selected = self.$container.selectonic("getSelected")
+            , prevLI   = selected.eq(0).prev('li')
+            , toSelect;
+
+          selected.each(function() {
+            self.delete(this);
+          });
+
+          toSelect = prevLI.length ? prevLI : self.$container.find('li').eq(0);
+          self.$container.selectonic('select', toSelect);
+          break;
+
+        case 37: //left or right arrows
+        case 39: //re throw it, but mapped to up/down
+          e.preventDefault();
+          e.which += 1;
+          $(e.target).trigger(e);
+      }
+    });
+  }
+
+  ChipList.prototype.delete = function(item) {
+    var $item = $(item)
+      , value = $item.text();
+
+      console.log(value, $item);
+
+    $item.remove();
+    dispatch("delete", this.listeners, this, [value]);
+    this.$container.selectonic("refresh");
+  }
+
+  ChipList.prototype.prepend = function(value) {
+    $('<li class="chip" tabindex="0"><span class="word">' + value + '</span><span class="delete"></span></li>').prependTo(this.$container);
+  }
+
+  //note: deleteAll doesn't dispatch delete events
+  ChipList.prototype.deleteAll = function() {
+    this.$container.empty();
+    this.$container.selectonic("refresh");
+  }
+
+  ChipList.prototype.registerListener = registerListener;
+
   //OverviewWordCloud "class". This just handles the data logic
   //and triggers events that ui components can respond to.
   var OverviewWordCloud = function(DataStreamer) {
@@ -31,9 +111,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
   }
 
   //Event can be "progress", "data", "done", or "inclusionchange".
-  OverviewWordCloud.prototype.registerListener = function(event, fn) {
-    (this.listeners[event] || (this.listeners[event] = [])).push(fn);
-  }
+  OverviewWordCloud.prototype.registerListener = registerListener;
 
   OverviewWordCloud.prototype.updateProgress = function(newProgress) {
     var oldProgress = this.progress;
@@ -71,13 +149,17 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     );
   }
 
-  //Utility function that OverviewWordCloud depends on.
+  //Utility functions that OverviewWordCloud depends on.
   function dispatch(event, listenersObj, thisVal, argsArr) {
     if(listenersObj[event] instanceof Array) {
       listenersObj[event].forEach(function(listener) {
         listener.apply(thisVal, argsArr);
       });
     }
+  }
+
+  function registerListener(event, fn) {
+    (this.listeners[event] || (this.listeners[event] = [])).push(fn);
   }
 
   function drawCloud(container, size, tokens, percentComplete) {
