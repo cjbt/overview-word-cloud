@@ -97,6 +97,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
   var OverviewWordCloud = function($window, $container, renderer, clickListener, DataStreamer) {
     var self = this, i = 0;
     this.progress = 0;
+    this.shownProgress = 0;
     this.renderer = renderer;
     this.$window = $window;
     this.$container = $container;
@@ -131,8 +132,25 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
   OverviewWordCloud.prototype.updateProgress = function(newProgress) {
     if(newProgress > this.progress) {
       this.progress = newProgress;
-      this.$progress.attr('value', this.progress);
+
+      //Usually, set shownProgress to the real progress squared, as that
+      //makes shownProgress grow faster as the real progress approaches 1.
+      //This makes the wait feel faster by under-promising and over-delivering.
+      //(See: http://www.nngroup.com/articles/progress-indicators/ for more.)
+      this.shownProgress = Math.max(this.progress*this.progress, this.shownProgress);
     }
+
+    //But, if a request to update the progress comes in and the newProgress is
+    //bigger than what we're showing before but smaller than the real progress,
+    //it's better to update the shownProgress to something closer to newProgress
+    //than to not update the bar at all (even though it messes with our 
+    //squared strategy). And because of this update, we use Math.max above to 
+    //make sure progress never goes backwards.
+    else if(newProgress > this.shownProgress) {
+      this.shownProgress = (newProgress*.25 + .75*this.shownProgress);
+    }
+
+    this.$progress.attr('value', this.shownProgress);
   }
 
   OverviewWordCloud.prototype.render = function() {
