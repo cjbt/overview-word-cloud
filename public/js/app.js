@@ -1,19 +1,97 @@
 var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDonePromise) {
 
-  var $window = jQuery(window);
+  //OverviewWordCloud "class". This just handles the data logic
+  //and triggers events that ui components can respond to.
+  var OverviewWordCloud = function(DataStreamer) {
+    var self = this;
+    this.progress = 0;
+    this.includedWords = {};
+    this.excludedWords = {};
+    this.listeners = {};
 
-  var getWordCloudData = function() {
-    return oboe('/generate?' + paramString);
+    DataStreamer()
+      .node("![*]", function(data) {
+        self.includedWords = data.tokens;
+        dispatch(
+          "data", 
+          self.listeners,
+          self, [self.includedWords, self.excludedWords, self.progress]
+        );
+        self.updateProgress(data.progress);
+        return oboe.drop;
+      })
+      .done(function() {
+        dispatch(
+          "done", 
+          self.listeners, 
+          self, 
+          [self.includedWords, self.excludedWords, self.progress]
+        );
+      })
   }
 
-  //a function setting up d3 cloud to implement
-  //my informal "renderer" interface.
-  var drawCloud = function(container, size, topTokens, percentComplete) {
+  //Event can be "progress", "data", "done", or "inclusionchange".
+  OverviewWordCloud.prototype.registerListener = function(event, fn) {
+    (this.listeners[event] || (this.listeners[event] = [])).push(fn);
+  }
+
+  OverviewWordCloud.prototype.updateProgress = function(newProgress) {
+    var oldProgress = this.progress;
+    if(newProgress > oldProgress) {
+      this.progress = newProgress;
+      dispatch(
+        "progress", 
+        this.listeners, 
+        this, [newProgress, oldProgress, this.includedWords]
+      );
+    }
+  }
+
+  OverviewWordCloud.prototype.includeWords = function(words) {
+    var self = this;
+    words.forEach(function(it) {
+      if(it in self.excludedWords) {
+        self.includedWords[it] = self.excludedWords[it];
+        delete self.excludedWords[it];
+      }
+    });
+    dispatch(
+      "inclusionchange", 
+      this.listeners,
+      this, [words, this.includedWords, this.excludedWords]
+    );
+  }
+
+  OverviewWordCloud.prototype.excludeWords = function(words) {
+    var self = this;
+    words.forEach(function(it) {
+      if(it in self.includedWords) {
+        self.excludedWords[it] = self.includedWords[it];
+        delete self.includedWords[it];
+      }
+    });
+    dispatch(
+      "inclusionchange", 
+      this.listeners,
+      this, [words, this.includedWords, this.excludedWords]
+    );
+  }
+
+  //Utility function that OverviewWordCloud depends on.
+  function dispatch(event, listenersObj, thisVal, argsArr) {
+    if(listenersObj[event] instanceof Array) {
+      listenersObj[event].forEach(function(listener) {
+        listener.apply(thisVal, argsArr);
+      });
+    }
+  }
+
+  function drawCloud(container, size, tokens, percentComplete) {
     //don't do any rendering until the fonts are ready.
     fontsDonePromise.then(function() {
       //this scaler is sorta arbitrary, but it works.
       //It grows linearly w/ docCount, which we expect the tfs to do as well.
-      var scaler = topTokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4)
+      var scaler = tokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4)
         , fontStack = '"Open Sans", Helvetica, Arial, sans-serif';
 
       container.style.width = size[0] + 'px';
@@ -21,7 +99,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
 
       d3Cloud()
         .size(size)
-        .words(topTokens.map(function(d) { 
+        .words(tokens.map(function(d) { 
           return {'text': d[0], 'size': d[1]/scaler}; 
         }))
         .padding(4)
@@ -131,57 +209,44 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     }
   }());
 
-  //OverviewWordCloud "class"
-  var OverviewWordCloud = function($window, $container, renderer, clickListener, DataStreamer) {
-    var self = this, i = 0;
-    this.progress = 0;
-    this.renderer = renderer;
-    this.$window = $window;
-    this.$container = $container;
-    this.$progress = $container.find('progress').eq(0);
-    this.latestData = {}
+  //hook things up
+  var $window    = jQuery(window)
+    , $container = jQuery('#cloud-container')
+    , $editor    = jQuery('#cloud-editor')
+    , $progress  = jQuery('progress')
+    , $editBtn   = jQuery('button');
 
-    DataStreamer()
-      .node("![*]", function(data) {
-        i++;
-        self.latestData = data.tokens;
-        self.updateProgress(data.progress);
-        self.render();
-        return oboe.drop;
-      })
-      .done(function() {
-        var resizeTimer, render = self.render.bind(self);
+  var cloud = new OverviewWordCloud(function() { 
+    return oboe('/generate?' + paramString);
+  });
 
-        $window.resize(function() {
-          clearTimeout(resizeTimer);
-          resizeTimer = setTimeout(render, 100);
-        });
-
-        render();
-        self.$progress.remove();
-      })
-
-    jQuery('html').click(function(e) {
-      clickListener.apply(this, [e, self.$container]);
-    });
-  }
-
-  OverviewWordCloud.prototype.updateProgress = function(newProgress) {
-    if(newProgress > this.progress) {
-      this.progress = newProgress;
-      this.$progress.attr('value', this.progress);
-    }
-  }
-
-  OverviewWordCloud.prototype.render = function() {
-    this.renderer(
-      this.$container[0],
-      [parseInt(this.$window.width(), 10), parseInt(this.$window.height(), 10)], 
-      this.latestData,
-      this.progress
+  var render = function() {
+    drawCloud(
+      $container[0], 
+      [parseInt($window.width(), 10), parseInt($window.height(), 10)],
+      cloud.includedWords,
+      cloud.progress
     );
-  };
+  }
 
-  //init
-  new OverviewWordCloud($window, jQuery('#cloud-container'), drawCloud, handleClick, getWordCloudData);
+  cloud.registerListener("progress", function(newProgress) {
+    $progress.attr('value', newProgress);
+    render();
+  });
+
+  cloud.registerListener("done", function() {
+    $progress.remove();
+    $editBtn.show();
+    render();
+  })
+
+  var resizeTimer;
+  $window.resize(function() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(render, 100);
+  });
+
+  jQuery('html').click(function(e) {
+    handleClick.apply(this, [e, $container]);
+  });
 };
