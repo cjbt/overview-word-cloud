@@ -55,7 +55,7 @@ html(lang="en", class="no-js")
 
           var paramString = window.location.search.substring(1);
 
-          App(oboe, jQuery, d3, d3.layout.cloud.bind(d3.layout), paramString, queryParams['server']);                    
+          App(oboe, jQuery, d3, d3.layout.cloud.bind(d3.layout), paramString, queryParams['server'], FontsDoneDeferred.promise);                    
         }
       }, {
         load: '//ajax.googleapis.com/ajax/libs/webfont/1.5.3/webfont.js',

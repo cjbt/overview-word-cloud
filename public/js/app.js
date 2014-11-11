@@ -1,4 +1,4 @@
-var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
+var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDonePromise) {
 
   var $window = jQuery(window);
 
@@ -9,59 +9,62 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server) {
   //a function setting up d3 cloud to implement
   //my informal "renderer" interface.
   var drawCloud = function(container, size, topTokens, percentComplete) {
-    //this scaler is sorta arbitrary, but it works.
-    //It grows linearly w/ docCount, which we expect the tfs to do as well.
-    var scaler = topTokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4)
-      , fontStack = '"Open Sans", Helvetica, Arial, sans-serif';
+    //don't do any rendering until the fonts are ready.
+    fontsDonePromise.then(function() {
+      //this scaler is sorta arbitrary, but it works.
+      //It grows linearly w/ docCount, which we expect the tfs to do as well.
+      var scaler = topTokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4)
+        , fontStack = '"Open Sans", Helvetica, Arial, sans-serif';
 
-    container.style.width = size[0] + 'px';
-    container.style.height = size[1] + 'px';
+      container.style.width = size[0] + 'px';
+      container.style.height = size[1] + 'px';
 
-    d3Cloud()
-      .size(size)
-      .words(topTokens.map(function(d) { 
-        return {'text': d[0], 'size': d[1]/scaler}; 
-      }))
-      .padding(4)
-      .timeInterval(10)
-      .rotate(function() { return 0; })
-      .font(fontStack)
-      .fontSize(function(d) { return d.size; })
-      .on("end", function(words) {
-        var oldClouds = d3.select('#cloud') 
-          , svg = d3.select(container).append('svg')
-              .attr("width", size[0])
-              .attr('id', 'cloud')
-              .attr("height", size[1]);
+      d3Cloud()
+        .size(size)
+        .words(topTokens.map(function(d) { 
+          return {'text': d[0], 'size': d[1]/scaler}; 
+        }))
+        .padding(4)
+        .timeInterval(10)
+        .rotate(function() { return 0; })
+        .font(fontStack)
+        .fontSize(function(d) { return d.size; })
+        .on("end", function(words) {
+          var oldClouds = d3.select('#cloud') 
+            , svg = d3.select(container).append('svg')
+                .attr("width", size[0])
+                .attr('id', 'cloud')
+                .attr("height", size[1]);
 
-          //chrome blurs elements with filters on retina displays, so don't apply
-          //the filters to the final wordcloud (where they don't make sense anyway)
-          if(percentComplete !== 1) {
-            svg = svg
-              .style('transform', 'scale('+ percentComplete + ')')
-              .style('filter', 'grayscale('+ (1 - percentComplete) + ')')
-              .style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')')
-          }
-          
-        svg
-          .append("g")
-            .attr("transform", "translate(" + [size[0] >> 1, size[1] >> 1] + ")")
-          .selectAll("text")
-            .data(words)
-          .enter().append("text")
-            .style("font-size", function(d) { return d.size + "px"; })
-            .style("font-family", fontStack)
-            .style("fill", function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; })
-            .attr("text-anchor", "middle")
-            .attr("transform", function(d) {
-              return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
-            })
-            .text(function(d) { return d.text; });
+            //chrome blurs elements with filters on retina displays, so don't apply
+            //the filters to the final wordcloud (where they don't make sense anyway)
+            if(percentComplete !== 1) {
+              svg = svg
+                .style('transform', 'scale('+ percentComplete + ')')
+                .style('filter', 'grayscale('+ (1 - percentComplete) + ')')
+                .style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')')
+            }
+            
+          svg
+            .append("g")
+              .attr("transform", "translate(" + [size[0] >> 1, size[1] >> 1] + ")")
+            .selectAll("text")
+              .data(words)
+            .enter().append("text")
+              .style("font-size", function(d) { return d.size + "px"; })
+              .style("font-family", fontStack)
+              .style("fill", function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; })
+              .attr("text-anchor", "middle")
+              .attr("transform", function(d) {
+                return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+              })
+              .text(function(d) { return d.text; });
 
-        oldClouds.remove();
+          oldClouds.remove();
 
-      })
-      .start();
+        })
+        .start();
+    });
   }
 
   function handleClick(e, $container) {
