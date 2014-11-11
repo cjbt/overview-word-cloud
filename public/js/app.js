@@ -61,8 +61,6 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     var $item = $(item)
       , value = $item.text();
 
-      console.log(value, $item);
-
     $item.remove();
     dispatch("delete", this.listeners, this, [value]);
     this.$container.selectonic("refresh");
