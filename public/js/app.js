@@ -260,16 +260,17 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
           args: [{q: term, name: 'with the word ' +  term}]
         }, server);
 
+        /*
         //calculate the new scaleFactor
         windowWidth = $window.width(); 
         windowCenter = [windowWidth/2, $window.height()/2];
         termRect     = $target.get(0).getBoundingClientRect();
-        scaleFactor = Math.min(3, Math.max(1, (windowWidth/termRect.width * .5)));
+        scaleFactor  = Math.min(1.3, Math.max(1, (windowWidth/termRect.width * .5)));
 
         //position logic, adjusting for the change in scaleFactor
         scaleChange  = (scaleFactor/oldScaleFactor);
         marginTop    = windowCenter[1] - (termRect.top - oldMarginTop)*scaleChange - (termRect.height*scaleChange)/2;
-        marginLeft   = windowCenter[0] - (termRect.left - oldMarginLeft)*scaleChange - (termRect.width*scaleChange)/2;
+        marginLeft   = windowCenter[0] - (termRect.left - oldMarginLeft)*scaleChange - (termRect.width*scaleChange)/2; */
 
         //manage classes. can't use $target.addClass()
         //because .className works differently in SVG
@@ -278,8 +279,8 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
         
         //start the animation
         $container
-          .addClass('with-selection')
-          .css({
+          .addClass('with-selection');
+          /*.css({
             'transform': 'scale(' + scaleFactor + ')',
             'marginTop': marginTop + 'px',
             'marginLeft': marginLeft + 'px'
@@ -288,7 +289,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
         //update oldX variables for next time
         oldScaleFactor = scaleFactor;
         oldMarginTop = marginTop;
-        oldMarginLeft = marginLeft;
+        oldMarginLeft = marginLeft;*/
       }
     }
   }());
