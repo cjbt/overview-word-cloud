@@ -32,11 +32,16 @@ html(lang="en", class="no-js")
         test: Modernizr.progressbar,
         nope: ['/static/js/progress-polyfill.min.js', '/static/css/progress-polyfill.css']
       }, {
+        load: '/static/js/rsvp-3.0.14.min.js',
+        complete: function() {
+          FontsDoneDeferred = RSVP.defer();
+        }
+      }, {
         load: ['/static/js/oboe-browser.min.js']
       }, {
         load: ['/static/js/d3.v3.min.js', '/static/js/d3.layout.cloud.js']
       }, {
-        load: ['/static/js/app.js'],
+        load: '/static/js/app.js',
         complete: function() {
           var queryParams = (function() {
             var queryParams = {};
@@ -51,5 +56,23 @@ html(lang="en", class="no-js")
           var paramString = window.location.search.substring(1);
 
           App(oboe, jQuery, d3, d3.layout.cloud.bind(d3.layout), paramString, queryParams['server']);                    
+        }
+      }, {
+        load: '//ajax.googleapis.com/ajax/libs/webfont/1.5.3/webfont.js',
+        complete: function() {
+          if(window.WebFont) {
+            WebFont.load({
+              google: {
+                families: ['Open Sans:400,700']
+              },
+              timeout: 5000,
+              active: function() { FontsDoneDeferred.resolve(true); },
+              inactive: function() { FontsDoneDeferred.resolve(false); }
+            });
+          }
+          //Google's CDN was down
+          else {
+            FontsDoneDeferred.resolve(false);
+          }
         }
       }])
