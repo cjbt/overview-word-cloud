@@ -78,6 +78,10 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     this.$container.selectonic("refresh");
   }
 
+  ChipList.prototype.getAll = function() {
+    return this.$container.find('li').map(function() { return this.textContent; }).get();
+  }
+
   ChipList.prototype.registerListener = registerListener;
 
   //OverviewWordCloud "class". This just handles the data logic
@@ -85,17 +89,17 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
   var OverviewWordCloud = function(DataStreamer) {
     var self = this;
     this.progress = 0;
-    this.includedWords = {};
-    this.excludedWords = {};
+    this.words = [];
+    this.toExclude = {};
     this.listeners = {};
 
     DataStreamer()
       .node("![*]", function(data) {
-        self.includedWords = data.tokens;
+        self.words = data.tokens;
         dispatch(
           "data", 
           self.listeners,
-          self, [self.includedWords, self.excludedWords, self.progress]
+          self, [self.words, self.progress]
         );
         self.updateProgress(data.progress);
         return oboe.drop;
@@ -105,7 +109,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
           "done", 
           self.listeners, 
           self, 
-          [self.includedWords, self.excludedWords, self.progress]
+          [self.words, self.progress]
         );
       })
   }
@@ -120,32 +124,38 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
       dispatch(
         "progress", 
         this.listeners, 
-        this, [newProgress, oldProgress, this.includedWords]
+        this, [newProgress, oldProgress, this.words]
       );
     }
   }
 
-  OverviewWordCloud.prototype.changeIncludedWords = function(include, exclude) {
-    var self = this;
+  OverviewWordCloud.prototype.setExcludedWords = function(exclude) {
+    var self = this, includedWords = [], excludedWords = [];
 
-    (include || []).forEach(function(it) {
-      if(it in self.excludedWords) {
-        self.includedWords[it] = self.excludedWords[it];
-        delete self.excludedWords[it];
-      }
+    if(this.progress < 1) {
+      throw new Error("At least for now, you can't change included " + 
+                      "words until the words are done loading initially.");
+    }
+
+    this.toExclude = {};
+
+    exclude.forEach(function(it) {
+      self.toExclude[it] = true;
     });
 
-    (exclude || []).forEach(function(it) {
-      if(it in self.includedWords) {
-        self.excludedWords[it] = self.includedWords[it];
-        delete self.includedWords[it];
+    this.words.forEach(function(wordData) {
+      if(self.toExclude[wordData[0]]) {
+        excludedWords.push(wordData);
       }
-    });
+      else {
+        includedWords.push(wordData);
+      }
+    })
 
     dispatch(
       "inclusionchange", 
       this.listeners,
-      this, [this.includedWords, this.excludedWords, include, exclude]
+      this, [includedWords, excludedWords, exclude]
     );
   }
 
@@ -290,31 +300,61 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     , $container = jQuery('#cloud-container')
     , $editor    = jQuery('#cloud-editor')
     , $progress  = jQuery('progress')
-    , $editBtn   = jQuery('button');
+    , $editBtn   = jQuery('#edit')
+    , $applyBtn  = jQuery('#apply')
+    , $fieldSets = $editor.find('fieldset')
+    , included   = new ChipList($fieldSets.eq(0), 'included')
+    , excluded   = new ChipList($fieldSets.eq(1), 'excluded');
 
   var cloud = new OverviewWordCloud(function() { 
     return oboe('/generate?' + paramString);
   });
 
-  var render = function() {
+  var render = function(words) {
     drawCloud(
       $container[0], 
       [parseInt($window.width(), 10), parseInt($window.height(), 10)],
-      cloud.includedWords,
+      words,
       cloud.progress
     );
   }
 
   cloud.registerListener("progress", function(newProgress) {
     $progress.attr('value', newProgress);
-    render();
+    render(cloud.words);
   });
 
   cloud.registerListener("done", function() {
     $progress.remove();
     $editBtn.show();
-    render();
+    cloud.words.forEach(function(wordData) {
+      included.prepend(wordData[0]);
+    });
+    render(cloud.words);
+  });
+
+  cloud.registerListener("inclusionchange", function(includedWords, excludedWords) {
+    render(includedWords);
+
+    included.deleteAll();
+    excluded.deleteAll();
+
+    includedWords.forEach(function(wordData) {
+      included.prepend(wordData[0]);
+    });
+
+    excludedWords.forEach(function(wordData) {
+      excluded.prepend(wordData[0]);
+    });
+  });
+
+  included.registerListener("delete", function(word) {
+    excluded.prepend(word);
   })
+
+  excluded.registerListener("delete", function(word) {
+    included.prepend(word);
+  });
 
   var resizeTimer;
   $window.resize(function() {
@@ -323,6 +363,24 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
   });
 
   jQuery('html').click(function(e) {
+    var $target = $(e.target);
+    //if we're clicking outside the editor...
+    if($target.parents('#cloud-container').length > 0) {
+      //hide editor if it's open. this preserves but doesn't apply changes.
+      //should we discard changes? maybe have an explicit cancel option?
+      $editor.slideUp();
+    }
+
+    //handle wordcloud clicks which, because of zooming, can be anywhere.
     handleClick.apply(this, [e, $container]);
+  });
+
+  $editBtn.click(function() {
+    $editor.slideDown(500);
+  });
+
+  $applyBtn.click(function() {
+    cloud.setExcludedWords(excluded.getAll());
+    $editor.slideUp();
   });
 };
