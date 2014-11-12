@@ -4,12 +4,15 @@ var url                = require('url')
   , fs                 = require('fs')
   , path               = require('path')
   , express            = require('express')
+  , morgan             = require('morgan')
   , oboe               = require('./lib/oboe-requester')
   , API                = require('./lib/api')
   , Heap               = require('heap')
   , DocSetTokenCounter = require('./lib/doc-set-token-counter')
   , util               = require('./lib/util')
   , app                = express();
+
+app.use(morgan('combined'));
 
 app.get('/generate', function(req, res, next) {
   var api = new API(req.query.server, req.query.apiToken)
@@ -88,8 +91,8 @@ app.get('/metadata', function(req, res, next) {
 })
 
 app.use('/static', express.static(__dirname + '/public'));
-app.listen(3000); //we'll figure out https on deployment.
-
+app.listen(process.env.PORT || 3000);
+console.log('Listening on port ' + (process.env.PORT || 3000));
 
 function computeProgress(priorSimilarities) {
   var measurementCount = priorSimilarities.length
