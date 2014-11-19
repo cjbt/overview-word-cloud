@@ -3,7 +3,6 @@ var express            = require('express')
   , morgan             = require('morgan')
   , oboe               = require('./lib/oboe-requester')
   , API                = require('./lib/api')
-  , Heap               = require('heap')
   , DocSetTokenCounter = require('./lib/doc-set-token-counter')
   , SendInterval       = 500 // ms between sends
   , app                = express();
@@ -20,7 +19,7 @@ app.get('/generate', function(req, res, next) {
   res.header('Content-Type', 'application/json');
 
   function sendSnapshot(lastSend) {
-    var vector   = tfdfArrayToTfMap(counter.getTopTokens(150, Heap))
+    var vector   = tfdfArrayToTfMap(counter.getTopTokens(150))
       , progress = nDocumentsTotal ? (nDocumentsProcessed / nDocumentsTotal) : 0
       , json     = getResponseJson(vector, progress)
       , before   = firstSend ? "[" : ",";
