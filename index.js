@@ -14,7 +14,7 @@ app.get('/generate', function(req, res, next) {
     , docStream = api.getAllDocuments(oboe, req.query.documentSetId, "random")
     , counter = new DocSetTokenCounter()
     , nDocumentsProcessed = 0, nDocumentsTotal
-    , firstSend = true, sendIntervalId;
+    , firstSend = true, sendTimeoutId;
 
   res.header('Content-Type', 'application/json');
 
@@ -24,6 +24,8 @@ app.get('/generate', function(req, res, next) {
       , json     = getResponseJson(vector, progress)
       , before   = firstSend ? "[" : ",";
 
+    console.log("Pushed %d bytes of JSON on docset %d", json.length, req.query.documentSetId);
+
     res.write(before + json);
     firstSend = false;
 
@@ -32,21 +34,25 @@ app.get('/generate', function(req, res, next) {
     }
   }
 
+  function sendSnapshotAndQueue() {
+    sendSnapshot(false);
+    sendTimeoutId = setTimeout(sendSnapshotAndQueue, SendInterval);
+  }
+
   docStream
     .node('pagination.total', function(total) {
       nDocumentsTotal = total;
 
-      sendIntervalId = setInterval(sendSnapshot, SendInterval);
+      sendTimeoutId = setTimeout(sendSnapshotAndQueue, SendInterval);
     })
     .node('items.*', function(doc) {
       nDocumentsProcessed += 1;
       counter.processDocument(doc.text);
 
-      //remove the doc from memory
-      return oboe.drop;
+      return oboe.drop; //remove the doc from memory
     })
     .done(function() {
-      clearInterval(sendIntervalId);
+      clearTimeout(sendTimeoutId);
       sendSnapshot(true);
     });
 });
