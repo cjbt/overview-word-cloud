@@ -201,9 +201,6 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
 
         var g = svg.append('g');
 
-        var exitGroup = svg.append('g')
-          .attr('transform', g.attr('transform'));
-
         var layout = d3.layout.cloud()
           .timeInterval(10)
           .size(size)
@@ -239,23 +236,32 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
           var text = g.selectAll('text')
             .data(data, function(d) { return d.text; });
 
+          // Adjust existing words
           text.transition()
             .duration(AnimationDuration)
             .attr('transform', function(d) { return "translate(" + [d.x, d.y] + ")"; })
             .style('font-size', function(d) { return d.size + 'px'; })
-            .style('opacity', 1);
+            .style('fill', function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; });
 
+          // Add new words
           text.enter().append('text')
+            .text(function(d) { return d.text; });
             .attr('text-anchor', 'middle')
             .attr('transform', function(d) { return "translate(" + [d.x, d.y] + ")"; })
             .style('font-family', function(d) { return d.font; })
             .style('font-size', function(d) { return d.size + 'px'; })
             .style('fill', function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; })
             .style('opacity', 1e-6)
-            .text(function(d) { return d.text; });
+            .transition()
+              .duration(AnimationDuration)
+              .style('opacity', 1);
+
+          var exitGroup = svg.append('g')
+            .attr('transform', g.attr('transform'));
 
           var exitGroupNode = exitGroup.node();
 
+          // Remove old words
           text.exit()
             .each(function() { exitGroupNode.appendChild(this); });
 
@@ -266,6 +272,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
             .style('opacity', 1e-6)
             .remove();
 
+          // adjust transform
           g.transition()
             .duration(AnimationDuration)
             .attr('transform', 'translate(' + [w >> 1, h >> 1] + ')scale(' + scale + ')');
