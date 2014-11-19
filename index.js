@@ -22,7 +22,7 @@ app.get('/generate', function(req, res, next) {
   function sendSnapshot(lastSend) {
     var vector   = tfdfArrayToTfMap(counter.getTopTokens(150, Heap))
       , progress = nDocumentsTotal ? (nDocumentsProcessed / nDocumentsTotal) : 0
-      , json     = getResponseJson(counter, progress)
+      , json     = getResponseJson(vector, progress)
       , before   = firstSend ? "[" : ",";
 
     res.write(before + json);
@@ -73,9 +73,9 @@ function tfdfArrayToTfMap(tfdf) {
   return obj;
 }
 
-function getResponseJson(counter, progress) {
+function getResponseJson(vector, progress) {
   return JSON.stringify({
     "progress": progress,
-    "tokens": counter.getTopTokens(150, Heap)
+    "tokens": vector
   });
 }
