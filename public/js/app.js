@@ -245,7 +245,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
 
           // Add new words
           text.enter().append('text')
-            .text(function(d) { return d.text; });
+            .text(function(d) { return d.text; })
             .attr('text-anchor', 'middle')
             .attr('transform', function(d) { return "translate(" + [d.x, d.y] + ")"; })
             .style('font-family', function(d) { return d.font; })
