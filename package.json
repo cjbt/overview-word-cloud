@@ -1,6 +1,6 @@
 {
   "name": "overview-wordcloud",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "A Wordcloud plugin for Overview",
   "repository": {
     "type": "git",
