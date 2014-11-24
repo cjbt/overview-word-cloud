@@ -9,12 +9,15 @@ var express            = require('express')
 
 app.use(morgan('combined'));
 
+var nextRequestId = 1;
+
 app.get('/generate', function(req, res, next) {
   var api = new API(req.query.server, req.query.apiToken)
     , docStream = api.getAllDocuments(oboe, req.query.documentSetId, "random")
     , counter = new DocSetTokenCounter()
     , nDocumentsProcessed = 0, nDocumentsTotal
-    , firstSend = true, sendTimeoutId;
+    , firstSend = true, sendTimeoutId
+    , requestId = nextRequestId++, requestStartDate = new Date();
 
   res.header('Content-Type', 'application/json');
 
@@ -24,20 +27,40 @@ app.get('/generate', function(req, res, next) {
       , json     = getResponseJson(vector, progress)
       , before   = firstSend ? "[" : ",";
 
-    console.log("Pushed %d bytes of JSON on docset %d", json.length, req.query.documentSetId);
-
     res.write(before + json);
     firstSend = false;
 
     if (lastSend) {
       res.end("]");
     }
+
+    console.log(
+      '[req %d] pushed %s JSON for docset %d - %d ms elapsed',
+      requestId,
+      lastSend ? 'last' : 'some',
+      req.query.documentSetId,
+      new Date() - requestStartDate
+    );
   }
 
   function sendSnapshotAndQueue() {
     sendSnapshot(false);
     sendTimeoutId = setTimeout(sendSnapshotAndQueue, SendInterval);
   }
+
+  function end() {
+    clearTimeout(sendTimeoutId);
+    sendSnapshot(true);
+  }
+
+  function abort() {
+    console.log('[req %d] abort', requestId);
+    docStream.abort(); // docStream will fire no more callbacks
+    if (sendTimeoutId) { clearTimeout(sendTimeoutId); }
+    res.end();
+  }
+
+  req.on('close', abort);
 
   docStream
     .node('pagination.total', function(total) {
@@ -51,10 +74,7 @@ app.get('/generate', function(req, res, next) {
 
       return oboe.drop; //remove the doc from memory
     })
-    .done(function() {
-      clearTimeout(sendTimeoutId);
-      sendSnapshot(true);
-    });
+    .done(end);
 });
 
 app.get('/show', function(req, res, next) {
