@@ -170,63 +170,145 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     (this.listeners[event] || (this.listeners[event] = [])).push(fn);
   }
 
+  // Returns a Promise of the Cloud object, which you'll use with updateCloud().
   function drawCloud(container, size, tokens, percentComplete) {
-    //don't do any rendering until the fonts are ready.
-    fontsDonePromise.then(function() {
-      //this scaler is sorta arbitrary, but it works.
-      //It grows linearly w/ docCount, which we expect the tfs to do as well.
-      var scaler = tokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4)
-        , fontStack = '"Open Sans", Helvetica, Arial, sans-serif';
-
-      container.style.width = size[0] + 'px';
-      container.style.height = size[1] + 'px';
-
-      d3Cloud()
-        .size(size)
-        .words(tokens.map(function(d) { 
-          return {'text': d[0], 'size': d[1]/scaler}; 
-        }))
-        .padding(4)
-        .timeInterval(10)
-        .rotate(function() { return 0; })
-        .font(fontStack)
-        .fontSize(function(d) { return d.size; })
-        .on("end", function(words) {
-          var oldClouds = d3.select('#cloud') 
-            , svg = d3.select(container).append('svg')
-                .attr("width", size[0])
-                .attr('id', 'cloud')
-                .attr("height", size[1]);
-
-            //chrome blurs elements with filters on retina displays, so don't apply
-            //the filters to the final wordcloud (where they don't make sense anyway)
-            if(percentComplete !== 1) {
-              svg = svg
-                .style('transform', 'scale('+ percentComplete + ')')
-                .style('filter', 'grayscale('+ (1 - percentComplete) + ')')
-                .style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')')
-            }
-            
-          svg
-            .append("g")
-              .attr("transform", "translate(" + [size[0] >> 1, size[1] >> 1] + ")")
-            .selectAll("text")
-              .data(words)
-            .enter().append("text")
-              .style("font-size", function(d) { return d.size + "px"; })
-              .style("font-family", fontStack)
-              .style("fill", function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; })
-              .attr("text-anchor", "middle")
-              .attr("transform", function(d) {
-                return "translate(" + [d.x, d.y] + ")";
-              })
-              .text(function(d) { return d.text; });
-
-          oldClouds.remove();
-
+    function tokensToArray(tokens) {
+      return Object.keys(tokens)
+        .map(function(k) {
+          return {
+            text: k,
+            value: tokens[k]
+          };
         })
-        .start();
-    });
+        // Sort so it's deterministic -- maybe that'll affect the cloud algo?
+        .sort(function(o1, o2) { return o1.value - o2.value; });
+    }
+
+    //don't do any rendering until the fonts are ready.
+    return fontsDonePromise
+      .then(function() {
+        var AnimationDuration = 500; // ms
+        //this scaler is sorta arbitrary, but it works.
+        //It grows linearly w/ docCount, which we expect the tfs to do as well.
+        //var scaler = tokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4);
+
+        var fontSize = d3.scale.linear()
+          .domain([ 1, Infinity ])
+          .range([ 7, 40 ]);
+
+        var svg = d3.select(container).append('svg')
+          .attr('id', 'cloud');
+
+        var g = svg.append('g');
+
+        var layout = d3.layout.cloud()
+          .timeInterval(10)
+          .size(size)
+          .rotate(function() { return 0; })
+          .font('"Open Sans", Helvetica, Arial, sans-serif')
+          .text(function(d) { return d.text; })
+          .on('end', draw);
+
+        function updateFontSize(tokensArray) {
+          var values = tokensArray.map(function(d) { return d.value; });
+          var maxValue = values.reduce(function(prev, v) { return Math.max(prev, v); }, 0);
+          fontSize.domain([ 1, maxValue ]);
+        }
+
+        function updateTokens(size, tokensArray) {
+          layout
+            .stop()
+            .size(size)
+            .fontSize(function(d) { return fontSize(d.value); })
+            .words(tokensArray)
+            .start();
+        }
+
+        function draw(data, bounds) {
+          var w = svg.attr('width');
+          var h = svg.attr('height');
+          var scale = bounds ? Math.min(
+            w / Math.abs(bounds[1].x - w / 2),
+            w / Math.abs(bounds[0].x - w / 2),
+            h / Math.abs(bounds[1].y - h / 2),
+            h / Math.abs(bounds[0].y - h / 2)) / 2 : 1;
+
+          var text = g.selectAll('text')
+            .data(data, function(d) { return d.text; });
+
+          // Adjust existing words
+          text.transition()
+            .duration(AnimationDuration)
+            .attr('transform', function(d) { return "translate(" + [d.x, d.y] + ")"; })
+            .style('font-size', function(d) { return d.size + 'px'; })
+            .style('fill', function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; });
+
+          // Add new words
+          text.enter().append('text')
+            .text(function(d) { return d.text; })
+            .attr('text-anchor', 'middle')
+            .attr('transform', function(d) { return "translate(" + [d.x, d.y] + ")"; })
+            .style('font-family', function(d) { return d.font; })
+            .style('font-size', function(d) { return d.size + 'px'; })
+            .style('fill', function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; })
+            .style('opacity', 1e-6)
+            .transition()
+              .duration(AnimationDuration)
+              .style('opacity', 1);
+
+          var exitGroup = svg.append('g')
+            .attr('transform', g.attr('transform'));
+
+          var exitGroupNode = exitGroup.node();
+
+          // Remove old words
+          text.exit()
+            .each(function() { exitGroupNode.appendChild(this); });
+
+          var transform = 'translate(' + [size[0] >> 1, size[1] >> 1] + ')';
+
+          exitGroup.transition()
+            .duration(AnimationDuration)
+            .style('opacity', 1e-6)
+            .remove();
+
+          // adjust transform
+          g.transition()
+            .duration(AnimationDuration)
+            .attr('transform', 'translate(' + [w >> 1, h >> 1] + ')scale(' + scale + ')');
+        }
+
+        function updateSize(size) {
+          container.style.width = size[0] + 'px';
+          container.style.height = size[1] + 'px';
+          layout.size(size);
+          svg.attr('width', size[0]).attr('height', size[1]);
+        }
+
+        function updatePercentComplete(percentComplete) {
+          svg
+            .style('transform', 'scale('+ percentComplete + ')')
+            .style('filter', 'grayscale('+ (1 - percentComplete) + ')')
+            .style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')');
+        }
+
+        function updateAll(size, tokens, percentComplete) {
+          var tokensArray = tokensToArray(tokens);
+
+          updateSize(size);
+          updateFontSize(tokensArray);
+          updatePercentComplete(percentComplete);
+          updateTokens(size, tokensArray);
+        }
+
+        updateAll(size, tokens, percentComplete);
+
+        return updateAll;
+      })
+      .catch(function(err) {
+        console.log(err.stack);
+        return function() { console.log('there was an error so we cannot draw'); };
+      });
   }
 
   var handleClick = (function () {
@@ -303,19 +385,22 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     , $applyBtn  = jQuery('#apply')
     , $fieldSets = $editor.find('fieldset')
     , included   = new ChipList($fieldSets.eq(0), 'included')
-    , excluded   = new ChipList($fieldSets.eq(1), 'excluded');
+    , excluded   = new ChipList($fieldSets.eq(1), 'excluded')
+    , updateCloudPromise;
 
   var cloud = new OverviewWordCloud(function() { 
     return oboe('/generate?' + paramString);
   });
 
-  var render = function(words) {
-    drawCloud(
-      $container[0], 
-      [parseInt($window.width(), 10), parseInt($window.height(), 10)],
-      words,
-      cloud.progress
-    );
+  function render(words) {
+    var size     = [ parseInt($window.width(), 10), parseInt($window.height(), 10) ]
+      , progress = cloud.progress;
+
+    if (updateCloudPromise) {
+      updateCloudPromise.then(function(f) { f(size, words, progress); });
+    } else {
+      updateCloudPromise = drawCloud($container[0], size, words, progress);
+    }
   }
 
   cloud.registerListener("progress", function(newProgress) {
