@@ -82,6 +82,9 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
 
   ChipList.prototype.registerListener = registerListener;
 
+
+
+
   //OverviewWordCloud "class". This just handles the data logic
   //and triggers events that ui components can respond to.
   var OverviewWordCloud = function(DataStreamer) {
@@ -179,9 +182,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
             text: k,
             value: tokens[k]
           };
-        })
-        // Sort so it's deterministic -- maybe that'll affect the cloud algo?
-        .sort(function(o1, o2) { return o1.value - o2.value; });
+        });
     }
 
     //don't do any rendering until the fonts are ready.
