@@ -224,14 +224,9 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
             .start();
         }
 
-        function draw(data, bounds) {
+        function draw(data) {
           var w = svg.attr('width');
           var h = svg.attr('height');
-          var scale = bounds ? Math.min(
-            w / Math.abs(bounds[1].x - w / 2),
-            w / Math.abs(bounds[0].x - w / 2),
-            h / Math.abs(bounds[1].y - h / 2),
-            h / Math.abs(bounds[0].y - h / 2)) / 2 : 1;
 
           var text = g.selectAll('text')
             .data(data, function(d) { return d.text; });
@@ -264,8 +259,6 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
           // Remove old words
           text.exit()
             .each(function() { exitGroupNode.appendChild(this); });
-
-          var transform = 'translate(' + [size[0] >> 1, size[1] >> 1] + ')';
 
           exitGroup.transition()
             .duration(AnimationDuration)
