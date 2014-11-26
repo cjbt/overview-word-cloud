@@ -188,67 +188,68 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     //don't do any rendering until the fonts are ready.
     return fontsDonePromise
       .then(function() {
-        var AnimationDuration = 500; // ms
-        //this scaler is sorta arbitrary, but it works.
-        //It grows linearly w/ docCount, which we expect the tfs to do as well.
-        //var scaler = tokens.reduce(function(prev, v) { return prev + v[1]; }, 0)/(size[0]*4);
+        var animationDuration = 500 // ms
+          , fontStack = "'Open Sans', Helvetica, Arial, sans-serif"
+          , chargeFn = function(d, i) { return -.1*d.value; }
+          , nodes;
 
         var fontSize = d3.scale.linear()
           .domain([ 1, Infinity ])
           .range([ 7, 40 ]);
+
+        var layout = d3.layout.force()
+          .size(size)
+          .charge(chargeFn)
+          .on('end', draw);
 
         var svg = d3.select(container).append('svg')
           .attr('id', 'cloud');
 
         var g = svg.append('g');
 
-        var layout = d3.layout.cloud()
-          .timeInterval(10)
-          .size(size)
-          .rotate(function() { return 0; })
-          .font('"Open Sans", Helvetica, Arial, sans-serif')
-          .text(function(d) { return d.text; })
-          .on('end', draw);
-
         function updateFontSize(tokensArray) {
           var values = tokensArray.map(function(d) { return d.value; });
-          var maxValue = values.reduce(function(prev, v) { return Math.max(prev, v); }, 0);
+          var maxValue = Math.max.apply(null, values);
           fontSize.domain([ 1, maxValue ]);
         }
 
         function updateTokens(tokensArray) {
+          nodes = tokensArray;
           layout
-            .stop()
-            .words(tokensArray)
-            .fontSize(function(d) { return fontSize(d.value); })
+            .nodes(tokensArray)
+            .charge(chargeFn)
             .start();
         }
 
-        function draw(data) {
-          var w = svg.attr('width');
-          var h = svg.attr('height');
+        function draw() {
+          var w = svg.attr('width')
+            , h = svg.attr('height');
+
+          var colorFn =  function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; }
+            , sizeFn  = function(d) { return fontSize(d.value) + 'px'; }
+            , transformFn = function(d) { return "translate(" + [d.x, d.y] + ")"; }
 
           var text = g.selectAll('text')
-            .data(data, function(d) { return d.text; });
+            .data(nodes, function(d) { return d.text; });
 
           // Adjust existing words
           text.transition()
-            .duration(AnimationDuration)
-            .attr('transform', function(d) { return "translate(" + [d.x, d.y] + ")"; })
-            .style('font-size', function(d) { return d.size + 'px'; })
-            .style('fill', function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; });
+            .duration(animationDuration)
+            .attr('transform', transformFn)
+            .style('font-size', sizeFn)
+            .style('fill', colorFn);
 
           // Add new words
           text.enter().append('text')
             .text(function(d) { return d.text; })
             .attr('text-anchor', 'middle')
-            .attr('transform', function(d) { return "translate(" + [d.x, d.y] + ")"; })
-            .style('font-family', function(d) { return d.font; })
-            .style('font-size', function(d) { return d.size + 'px'; })
-            .style('fill', function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; })
-            .style('opacity', 1e-6)
+            .attr('transform', transformFn)
+            .style('font-family', fontStack)
+            .style('font-size', sizeFn)
+            .style('fill', colorFn)
+            .style('opacity', 0)
             .transition()
-              .duration(AnimationDuration)
+              .duration(animationDuration)
               .style('opacity', 1);
 
           var exitGroup = svg.append('g')
@@ -261,14 +262,9 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
             .each(function() { exitGroupNode.appendChild(this); });
 
           exitGroup.transition()
-            .duration(AnimationDuration)
-            .style('opacity', 1e-6)
+            .duration(animationDuration)
+            .style('opacity', 0)
             .remove();
-
-          // adjust transform
-          g.transition()
-            .duration(AnimationDuration)
-            .attr('transform', 'translate(' + [w >> 1, h >> 1] + ')scale(' + scale + ')');
         }
 
         function updateSize(size) {
@@ -379,7 +375,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     , $fieldSets = $editor.find('fieldset')
     , included   = new ChipList($fieldSets.eq(0), 'included')
     , excluded   = new ChipList($fieldSets.eq(1), 'excluded')
-    , updateCloudPromise;
+    , cloudPromise;
 
   var cloud = new OverviewWordCloud(function() { 
     return oboe('/generate?' + paramString);
@@ -389,10 +385,10 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
     var size     = [ parseInt($window.width(), 10), parseInt($window.height(), 10) ]
       , progress = cloud.progress;
 
-    if (updateCloudPromise) {
-      updateCloudPromise.then(function(f) { f(size, words, progress); });
+    if (cloudPromise) {
+      cloudPromise.then(function(updater) { updater(size, words, progress); });
     } else {
-      updateCloudPromise = drawCloud($container[0], size, words, progress);
+      cloudPromise = drawCloud($container[0], size, words, progress);
     }
   }
 
