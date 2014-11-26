@@ -435,7 +435,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
   var resizeTimer;
   $window.resize(function() {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(render, 100);
+    resizeTimer = setTimeout(function() { render(cloud.words); }, 100);
   });
 
   jQuery('html').click(function(e) {
