@@ -215,12 +215,11 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
           fontSize.domain([ 1, maxValue ]);
         }
 
-        function updateTokens(size, tokensArray) {
+        function updateTokens(tokensArray) {
           layout
             .stop()
-            .size(size)
-            .fontSize(function(d) { return fontSize(d.value); })
             .words(tokensArray)
+            .fontSize(function(d) { return fontSize(d.value); })
             .start();
         }
 
@@ -291,7 +290,7 @@ var App = function(oboe, jQuery, d3, d3Cloud, paramString, server, fontsDoneProm
           updateSize(size);
           updateFontSize(tokensArray);
           updatePercentComplete(percentComplete);
-          updateTokens(size, tokensArray);
+          updateTokens(tokensArray);
         }
 
         updateAll(size, tokens, percentComplete);
