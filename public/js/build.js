@@ -12969,7 +12969,9 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
         $html.on("click", "#cloud-container, .close", (function(e) {
           $hiddenDiv.hide();
         }));
-        $html.click(handleClick);
+        $html.click(function(e) {
+          handleClick(e, $container);
+        });
         $html.on("mouseenter mouseleave", wordsSelector, function(e) {
           var $target = $(e.target),
               offset;
@@ -12977,7 +12979,7 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
             offset = $target.offset();
             $hoveredWord = $target;
             $hideBtn.css({
-              'top': offset.top + 'px',
+              'top': (offset.top) + 'px',
               'left': (offset.left + $target.width()) + 'px',
               'opacity': 1
             });
@@ -12998,6 +13000,7 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
           $hiddenDiv.show();
         });
         var handleClick = (function() {
+          debugger;
           var oldMarginTop = 0,
               oldMarginLeft = 0,
               oldScaleFactor = 1;

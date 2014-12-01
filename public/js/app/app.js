@@ -63,7 +63,7 @@ export default function(paramString, server) {
   });
 
   $html.on("click", "#cloud-container, .close", (e) => { $hiddenDiv.hide(); });
-  $html.click(handleClick);
+  $html.click(function(e) { handleClick(e, $container); });
 
   $html.on("mouseenter mouseleave", wordsSelector, function(e) {
     var $target = $(e.target), offset;
@@ -73,7 +73,7 @@ export default function(paramString, server) {
       $hoveredWord = $target;
 
       $hideBtn.css({
-        'top': offset.top + 'px',
+        'top': (offset.top) + 'px',
         'left': (offset.left + $target.width()) + 'px',
         'opacity': 1
       });
