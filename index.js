@@ -22,7 +22,7 @@ app.get('/generate', function(req, res, next) {
   res.header('Content-Type', 'application/json');
 
   function sendSnapshot(lastSend) {
-    var vector   = tfdfArrayToTfMap(counter.getTopTokens(150))
+    var vector   = tfdfArrayToTfMap(counter.getTopTokens(120))
       , progress = nDocumentsTotal ? (nDocumentsProcessed / nDocumentsTotal) : 0
       , json     = getResponseJson(vector, progress)
       , before   = firstSend ? "[" : ",";

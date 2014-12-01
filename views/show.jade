@@ -3,226 +3,43 @@ html(lang="en", class="no-js")
   head
     meta(charset="utf-8")
     meta(http-equiv="X-UA-Compatible", content="IE=edge")
-    style.
-      * { margin: 0; padding: 0; font-family: "Open Sans", Helvetica, Arial, sans-serif; }
+    script(src="static/js/lib/traceur.js")
+    script(src="static/js/lib/system.js")
+    script(src="static/js/build.js")
+    script.
+      var paramString = window.location.search.substring(1);
+      var queryParams = (function() {
+        var queryParams = {};
+        var paramStrings = window.location.search.substring(1).split("&");
+        paramStrings.forEach(function(paramString) {
+          var pair = paramString.split('='); 
+          queryParams[pair[0]] = decodeURIComponent(pair[1]); 
+        })
+        return queryParams;
+      }());
 
-      fieldset {
-        border: 0;
-        margin-bottom: 1em;
-      }
+      System.config({
+        baseURL: '/static/js'
+      });
 
-      label {
-        font-weight: bold;
-        padding: .5em 0;
-        display: block;
-      }
+      System.import('app/app').then(function(app) {
+        $(function() { app['default'](paramString, queryParams['server']) });
+      });
 
-      button { 
-        cursor: pointer;
-        text-shadow: -1px -1px 1px #ffffff, -1px 1px 1px #ffffff, 1px -1px 1px #ffffff, 1px 1px 1px #ffffff;
-        padding: 4px 10px;
-        color: #333333;
-        background-color: #efefef;
-        background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxMDAlJyBoZWlnaHQ9JzQwMCUnIHZpZXdCb3g9JzAgMCAxIDQnIHByZXNlcnZlQXNwZWN0UmF0aW89J25vbmUnPjxyZWN0IGZpbGw9JyNlZmVmZWYnIHg9JzAnIHk9JzAnIHdpZHRoPScxJyBoZWlnaHQ9JzQnLz48cGF0aCBmaWxsPScjZjdmN2Y3JyBkPSdNMCwxTDEsMEwxLDRMMCw0WicvPjxwYXRoIGZpbGw9JyNmZmZmZmYnIGQ9J00wLDRMMSwzLjVMMSw0TDAsNFonLz48L3N2Zz4=);
-        background-size: 100% 400%;
-        background-position: 0 0;
-        border: 1px solid #cccccc;
-        border-bottom-color: #b3b3b3;
-        border-radius: 4px;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 1px 2px rgba(0,0,0,.15);
-      }
-
-      .delete {
-        cursor: pointer;
-        background-size: 9px 9px;
-        background-position: 5px 3px;
-        width: 14px;
-        height: 12px;
-        vertical-align: baseline;
-        display: inline-block;
-        background-repeat: no-repeat;
-        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAAAXNSR0IArs4c6QAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAACXBIWXMAAAsTAAALEwEAmpwYAAABWWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNS40LjAiPgogICA8cmRmOlJERiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiPgogICAgICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgICAgICAgICB4bWxuczp0aWZmPSJodHRwOi8vbnMuYWRvYmUuY29tL3RpZmYvMS4wLyI+CiAgICAgICAgIDx0aWZmOk9yaWVudGF0aW9uPjE8L3RpZmY6T3JpZW50YXRpb24+CiAgICAgIDwvcmRmOkRlc2NyaXB0aW9uPgogICA8L3JkZjpSREY+CjwveDp4bXBtZXRhPgpMwidZAAAA20lEQVQoFY2R4Q2CMBCFW8o6/GALQV2ANmENR3CQwgJqcQ3iCP5zhhJ8r1IjJhDuD5d737sed8oY88zz/NX3/UOsRF3XOssylyilTt57W1XVbYmnRoasJITCRUp5GMfRtW27/zUShlZCu0I7BsNkchAK5F3TNCVrWmuHTwG4AxxqX8MEdDDtkBNksPMdDdgoxMzACpYQXxLsbK0NnT+4EElMtn5nL2Dm7SNhG3GU1Z8OI01r5TZc3BBHZM4at0eGNckL8igU/m9AgBFvkaapSYZhODNZgmmgRobsGyzxguw/LwavAAAAAElFTkSuQmCC);
-      }
-
-      .chipList {
-        width: 100%;
-        list-style-type: none;
-      }
-
-      .chip {
-        font-size: .875em;
-        line-height: 1.2em;
-        display: inline-block;
-        border: 1px solid #ccc;
-        padding: 5px;
-        margin: 2px 4px 2px 0;
-      }
-
-      .chip.j-selected {
-        background-color: #04f;
-        color: white;
-      }
-
-      .chip.j-selected .delete {
-        background-image: url(data:image/png;base64,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);
-      }
-
-      /* "deleting" from the excluded list is, 
-         from the user's perspective, adding back to
-         the included list. */
-      #chiplist-excluded .chip .delete {
-        background-image: none;
-      }
-
-      #chiplist-excluded .chip .delete::after {
-        content: "+";
-        margin-left: 4px;
-        font-size: 1.4em;
-        vertical-align: bottom;
-        display: inline-block;
-        color: #686868;
-        margin-top: -1px;
-      }
-
-      #cloud-editor button {
-        width: -webkit-calc(100% + 20px);
-        width: calc(100% + 20px);
-        box-sizing: border-box;
-        padding-top: .5em;
-        padding-bottom: .5em;
-        border-width: 1px 0 0 0;
-        border-radius: 0;
-        font-size: .875em;
-        margin-left: -10px;
-      }
-
-      progress {
-        width: 200px;
-      }
-
-      progress, #edit {
-        position: fixed;
-        bottom: 8px;
-        left: 10px;
-        z-index: 2;
-      }
-
-      #cloud-editor {
-        position: absolute;
-        top: -4px;
-        padding: 4px 10px;
-        left: 0;
-        right: 0;
-        border: 1px solid #333;
-        border-radius: 4px;
-        background-color: white;
-        z-index: 2;
-        max-height: 75%;
-        overflow: auto;
-      }
-
-      #cloud-editor ul {
-        position: relative;
-        max-height: 100%;
-        overflow: scroll;
-
-      }
-
-      #cloud-container {
-        -webkit-transform-origin: 0% 0%;
-        -webkit-transition-duration: .5s;
-        -webkit-transition-property: -webkit-transform, margin-top, margin-left;
-        -webkit-transition-timing-function: cubic-bezier(.02, .01, .47, 1);
-
-        transform-origin: 0% 0%;
-        transition-duration: .5s;
-        transition-property: transform, margin-top, margin-left;
-        transition-timing-function: ease;
-        overflow: hidden;
-      }
-
-      text {
-        -webkit-transition: fill .5s;
-        transition: fill .5s;
-      }
-
-      .with-selection text:not(.active) {
-        fill: #cfcfcf !important;
-      }
+    link(rel="stylesheet", href="static/css/style.css")
 
   body
     progress(max="1.0", value="0")
-    //
-      button#edit(style="display:none") Edit
-      #cloud-editor(style="display:none")
-        form
-          fieldset
-            label Words to Show
+    button#edit(style="display:none") Edit
+    #cloud-editor(style="display:none")
+      form
+        fieldset
+          label Words to Show
 
-          fieldset
-            label Words to Hide
+        fieldset
+          label Words to Hide
 
-        button#apply.
-          Save
+      button#apply.
+        Save
 
     #cloud-container
-
-    //- Using almond.js or similar could make the below a bit faster,
-    //- but it would require us to not load jquery from a cdn.
-    script(src="/static/js/modernizr.custom.js")
-    script.
-      Modernizr.load([{
-        load: '//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js',
-        complete: function() {
-          if(!window.jQuery) {
-            Modernizr.load('/static/js/jquery-2.1.1.min.js');
-          }
-        }
-      }, {
-        test: Modernizr.progressbar,
-        nope: ['/static/js/progress-polyfill.min.js', '/static/css/progress-polyfill.css']
-      }, {
-        load: '/static/js/rsvp-3.0.14.min.js',
-        complete: function() {
-          FontsDoneDeferred = RSVP.defer();
-        }
-      }, {
-        load: ['/static/js/oboe-browser.min.js']
-      }, {
-        load: ['/static/js/d3.v3.min.js', '/static/js/d3.layout.cloud.js']
-      }, {
-        load: ['/static/js/selectonic.min.js', '/static/js/app.js'],
-        complete: function() {
-          var queryParams = (function() {
-            var queryParams = {};
-            var paramStrings = window.location.search.substring(1).split("&");
-            paramStrings.forEach(function(paramString) {
-              var pair = paramString.split('='); 
-              queryParams[pair[0]] = decodeURIComponent(pair[1]); 
-            })
-            return queryParams;
-          }());
-
-          var paramString = window.location.search.substring(1);
-
-          App(oboe, jQuery, d3, d3.layout.cloud.bind(d3.layout), paramString, queryParams['server'], FontsDoneDeferred.promise);                    
-        }
-      }, {
-        load: '//ajax.googleapis.com/ajax/libs/webfont/1.5.3/webfont.js',
-        complete: function() {
-          if(window.WebFont) {
-            WebFont.load({
-              google: {
-                families: ['Open Sans:400,700']
-              },
-              timeout: 5000,
-              active: function() { FontsDoneDeferred.resolve(true); },
-              inactive: function() { FontsDoneDeferred.resolve(false); }
-            });
-          }
-          //Google's CDN was down
-          else {
-            FontsDoneDeferred.resolve(false);
-          }
-        }
-      }])
