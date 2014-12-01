@@ -7,18 +7,18 @@ import ChipList from './ChipList'
 
 export default function(paramString, server) {
   var $window    = $(window)
+    , $html      = $('html')
     , $container = $('#cloud-container')
-    , $editor    = $('#cloud-editor')
     , $progress  = $('progress')
-    , $editBtn   = $('#edit')
-    , $applyBtn  = $('#apply')
-    , $fieldSets = $editor.find('fieldset')
-    , included   = new ChipList($fieldSets.eq(0), 'included')
-    , excluded   = new ChipList($fieldSets.eq(1), 'excluded'); 
+    , $hideBtn   = $('.delete')
+    , $hiddenBtn = $('#hidden-btn')
+    , $hiddenDiv = $('#hidden-list')
+    , wordsSelector = 'text'; 
 
   //generate our objects and hook up various event listeners
   var cloud  = new Cloud(() => oboe('/generate?' + paramString))
-    , layout = new CloudLayout();
+    , layout = new CloudLayout()
+    , $hoveredWord;
 
   var render = function() {
     layout.render(
@@ -36,38 +36,24 @@ export default function(paramString, server) {
 
   cloud.observe("done", function() {
     $progress.remove();
-    $editBtn.show();
-    Object.keys(cloud.words).forEach(function(word) {
-      included.prepend(word);
-    });
     render();
   });
 
-  cloud.observe("inclusionchange", function(includedWords, excludedWords) {
+  cloud.observe("inclusionchange", function(included, excluded) {
     render();
 
-    included.deleteAll();
-    excluded.deleteAll();
+    for(var key in excluded) {
+      $hiddenDiv.addClass('hasHidden');
+      return;
+    }
 
-    Object.keys(includedWords).forEach(function(word) { 
-      included.prepend(word); 
-    });
-
-    Object.keys(excludedWords).forEach(function(word) { 
-      excluded.prepend(word); 
-    });
+    //if we're here, we didn't have any excluded words.
+    $hiddenDiv.removeClass('hasHidden');
   });
 
-  included.observe("delete", function(word) { excluded.prepend(word); });
-  excluded.observe("delete", function(word) { included.prepend(word); });
-
-  $editBtn.click(function() { 
-    $editor.slideDown(500); 
-  });
-
-  $applyBtn.click(function() {
-    cloud.setExcludedWords(excluded.getAll()); 
-    $editor.slideUp(); 
+  $hiddenDiv.on("click", "li", function(e) {
+    cloud.includeWord(e.target.textContent)
+    $(e.target).remove();
   });
 
   var resizeTimer;
@@ -76,24 +62,47 @@ export default function(paramString, server) {
     resizeTimer = setTimeout(render, 100);
   });
 
-  $('html').click(function(e) {
-    var $target = $(e.target);
-    //if we're clicking outside the editor...
-    if($target.parents('#cloud-container').length > 0) {
-      //hide editor if it's open. this preserves but doesn't apply changes.
-      //should we discard changes? maybe have an explicit cancel option?
-      $editor.slideUp();
+  $html.on("click", "#cloud-container, .close", (e) => { $hiddenDiv.hide(); });
+  $html.click(handleClick);
+
+  $html.on("mouseenter mouseleave", wordsSelector, function(e) {
+    var $target = $(e.target), offset;
+
+    if(e.type != "mouseleave") {
+      offset = $target.offset();
+      $hoveredWord = $target;
+
+      $hideBtn.css({
+        'top': offset.top + 'px',
+        'left': (offset.left + $target.width()) + 'px',
+        'opacity': 1
+      });
     }
 
-    //handle wordcloud clicks which, because of zooming, can be anywhere.
-    handleClick.apply(this, [e, $container]);
+    else {
+      setTimeout(function() {
+        $hideBtn.css('opacity', 0); 
+        $hoveredWord = null;
+      }, 1000);
+    } 
+  });
+
+  $hideBtn.on("click", function(e) {
+    var text = $hoveredWord.text();
+    $hoveredWord.remove();
+    $hiddenDiv.find('ul').prepend('<li>' + text + '</li>');
+    cloud.excludeWord(text);
+  });
+
+  $hiddenBtn.click(function() {
+    $hiddenDiv.show();
   });
 
   var handleClick = (function () {
     //state to track between clicks, stored in a closure.
     var oldMarginTop = 0, oldMarginLeft = 0, oldScaleFactor = 1;
 
-    return function(e, $container) {
+    return function(e) {
       var $target = $(e.target), term, termRect, windowWidth, windowCenter
         , marginTop, marginLeft, scaleFactor, scaleChange;
 

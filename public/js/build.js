@@ -12600,17 +12600,24 @@ System.register("app/OverviewWordCloud", ["./utils"], function($__export) {
             }
           },
           setExcludedWords: function(exclude) {
-            var $__0 = this;
             for (var key in this.excluded) {
               this.words[key] = this.excluded[key];
             }
             this.excluded = {};
-            exclude.forEach((function(it) {
-              if ($__0.words.hasOwnProperty(it)) {
-                $__0.excluded[it] = $__0.words[it];
-                delete $__0.words[it];
-              }
-            }));
+            exclude.forEach(this.excludeWord.bind(this));
+          },
+          includeWord: function(word) {
+            if (this.excluded.hasOwnProperty(word)) {
+              this.words[word] = this.excluded[word];
+              delete this.excluded[word];
+            }
+            this._dispatch("inclusionchange", [this.words, this.excluded]);
+          },
+          excludeWord: function(word) {
+            if (this.words.hasOwnProperty(word)) {
+              this.excluded[word] = this.words[word];
+              delete this.words[word];
+            }
             this._dispatch("inclusionchange", [this.words, this.excluded]);
           }
         }, {});
@@ -12667,11 +12674,9 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
       CloudLayout = (function() {
         var CloudLayout = function CloudLayout() {
           var friction = arguments[0] !== (void 0) ? arguments[0] : .9;
-          var gravity = arguments[1] !== (void 0) ? arguments[1] : 0;
-          var charge = arguments[2];
           var $__0 = this;
           this.layout = d3.layout.force().friction(friction).gravity(0).on('tick', this._tick.bind(this));
-          this.layout.charge(charge || ((function(d, i) {
+          this.layout.charge(((function(d, i) {
             var size = $__0.layout.size();
             return (-.15 * (120 / $__0.tokensToShow) * size[0] * size[1] * d.value) / $__0.totalTokenFreqs;
           })));
@@ -12921,18 +12926,18 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
     execute: function() {
       $__export('default', function(paramString, server) {
         var $window = $(window),
+            $html = $('html'),
             $container = $('#cloud-container'),
-            $editor = $('#cloud-editor'),
             $progress = $('progress'),
-            $editBtn = $('#edit'),
-            $applyBtn = $('#apply'),
-            $fieldSets = $editor.find('fieldset'),
-            included = new ChipList($fieldSets.eq(0), 'included'),
-            excluded = new ChipList($fieldSets.eq(1), 'excluded');
+            $hideBtn = $('.delete'),
+            $hiddenBtn = $('#hidden-btn'),
+            $hiddenDiv = $('#hidden-list'),
+            wordsSelector = 'text';
         var cloud = new Cloud((function() {
           return oboe('/generate?' + paramString);
         })),
-            layout = new CloudLayout();
+            layout = new CloudLayout(),
+            $hoveredWord;
         var render = function() {
           layout.render($container[0], [parseInt($window.width(), 10), parseInt($window.height(), 10)], cloud.words, cloud.progress);
         };
@@ -12942,54 +12947,61 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
         });
         cloud.observe("done", function() {
           $progress.remove();
-          $editBtn.show();
-          Object.keys(cloud.words).forEach(function(word) {
-            included.prepend(word);
-          });
           render();
         });
-        cloud.observe("inclusionchange", function(includedWords, excludedWords) {
+        cloud.observe("inclusionchange", function(included, excluded) {
           render();
-          included.deleteAll();
-          excluded.deleteAll();
-          Object.keys(includedWords).forEach(function(word) {
-            included.prepend(word);
-          });
-          Object.keys(excludedWords).forEach(function(word) {
-            excluded.prepend(word);
-          });
+          for (var key in excluded) {
+            $hiddenDiv.addClass('hasHidden');
+            return;
+          }
+          $hiddenDiv.removeClass('hasHidden');
         });
-        included.observe("delete", function(word) {
-          excluded.prepend(word);
-        });
-        excluded.observe("delete", function(word) {
-          included.prepend(word);
-        });
-        $editBtn.click(function() {
-          $editor.slideDown(500);
-        });
-        $applyBtn.click(function() {
-          console.log(excluded.getAll());
-          cloud.setExcludedWords(excluded.getAll());
-          $editor.slideUp();
+        $hiddenDiv.on("click", "li", function(e) {
+          cloud.includeWord(e.target.textContent);
+          $(e.target).remove();
         });
         var resizeTimer;
         $window.resize(function() {
           clearTimeout(resizeTimer);
           resizeTimer = setTimeout(render, 100);
         });
-        $('html').click(function(e) {
-          var $target = $(e.target);
-          if ($target.parents('#cloud-container').length > 0) {
-            $editor.slideUp();
+        $html.on("click", "#cloud-container, .close", (function(e) {
+          $hiddenDiv.hide();
+        }));
+        $html.click(handleClick);
+        $html.on("mouseenter mouseleave", wordsSelector, function(e) {
+          var $target = $(e.target),
+              offset;
+          if (e.type != "mouseleave") {
+            offset = $target.offset();
+            $hoveredWord = $target;
+            $hideBtn.css({
+              'top': offset.top + 'px',
+              'left': (offset.left + $target.width()) + 'px',
+              'opacity': 1
+            });
+          } else {
+            setTimeout(function() {
+              $hideBtn.css('opacity', 0);
+              $hoveredWord = null;
+            }, 1000);
           }
-          handleClick.apply(this, [e, $container]);
+        });
+        $hideBtn.on("click", function(e) {
+          var text = $hoveredWord.text();
+          $hoveredWord.remove();
+          $hiddenDiv.find('ul').prepend('<li>' + text + '</li>');
+          cloud.excludeWord(text);
+        });
+        $hiddenBtn.click(function() {
+          $hiddenDiv.show();
         });
         var handleClick = (function() {
           var oldMarginTop = 0,
               oldMarginLeft = 0,
               oldScaleFactor = 1;
-          return function(e, $container) {
+          return function(e) {
             var $target = $(e.target),
                 term,
                 termRect,

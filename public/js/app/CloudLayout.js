@@ -14,13 +14,13 @@ var fontsDonePromise = new Promise((resolve, reject) => {
 });
 
 class CloudLayout {
-  constructor(friction = .9, gravity = 0, charge) {
+  constructor(friction = .9) {
     this.layout = d3.layout.force()
                     .friction(friction)
                     .gravity(0)
                     .on('tick', this._tick.bind(this));
 
-    this.layout.charge(charge || ((d, i) => {
+    this.layout.charge(((d, i) => {
       var size = this.layout.size();
       return (-.15*(120/this.tokensToShow)*size[0]*size[1]*d.value)/this.totalTokenFreqs;
     }));

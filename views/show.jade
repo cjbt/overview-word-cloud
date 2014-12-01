@@ -30,6 +30,19 @@ html(lang="en", class="no-js")
 
   body
     progress(max="1.0", value="0")
+    button#hidden-btn Hidden Words
+    button.delete
+
+    section#hidden-list
+      header
+        span.close
+        h1.accessibility Hidden Words
+        p.to-show.instructions Click on a word below to add it back to the cloud.
+        p.to-hide.instructions You haven&rsquo;t hidden any words yet. To hide a word, hover over it and click the close icon.
+      ul
+
+    #cloud-container
+  //
     button#edit(style="display:none") Edit
     #cloud-editor(style="display:none")
       form
@@ -41,5 +54,3 @@ html(lang="en", class="no-js")
 
       button#apply.
         Save
-
-    #cloud-container
