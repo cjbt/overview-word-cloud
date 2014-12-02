@@ -13000,7 +13000,6 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
           $hiddenDiv.show();
         });
         var handleClick = (function() {
-          debugger;
           var oldMarginTop = 0,
               oldMarginLeft = 0,
               oldScaleFactor = 1;
