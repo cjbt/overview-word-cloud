@@ -81,24 +81,35 @@ class CloudLayout {
     this.fontScale.domain([1, maxValue]);
     this.toCenterScale.domain([1, maxValue]);
 
-    //set the initial position on each node.
-    nodes = tokensArray.map((d) => {
-      var angle = 2*Math.PI*((d.value % 360)/360);
+    // Save the [x, y] of the existing nodes into an object, 
+    // so we can keep their if they're still in the cloud.
+    oldNodePositions = this.layout.nodes().reduce((d, prev) => { 
+      prev[d.key] = [d.x, d.y]; 
+      return prev; 
+    }, {});
 
-      var distanceToEdgeAtAngle = Math.min(
-        Math.abs(center[0]/Math.cos(angle)),
-        Math.abs(center[1]/Math.sin(angle))
-      );
+    // Build the new nodes.
+    nodes = tokensArray.map((node, i) => {
+      // Use the word's existing position if possible
+      if(oldNodePositions[node.text]) {
+        [node.x, node.y] = oldNodePositions[node.text]
+      }
 
-      var offsets = cartesianToOffsets(polarToCartesian([
-        distanceToEdgeAtAngle*(1-this.toCenterScale(d.value)), 
-        angle
-      ]), center);
+      // Otherwise, generate initial position for the node.
+      else {
+        let angle = 2*Math.PI*((node.value % 360)/360);
 
-      d.x = offsets[0];
-      d.y = offsets[1];
+        let distanceToEdgeAtAngle = 
+          distanceFromCenterToNearestEdgeAtAngle(center[0], center[1], angle);
 
-      return d;
+        let r = distanceToEdgeAtAngle*(1-this.toCenterScale(node.value));
+
+        [node.x, node.y] = cartesianToOffsets(polarToCartesian([r, angle]), center);
+      }
+
+      node.index = i;
+
+      return node;
     });
 
     // Generate links--not for d3, but for our custom forces.
