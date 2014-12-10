@@ -62,9 +62,9 @@ class CloudLayout {
   setPercentComplete(percentComplete) {
     this.percentComplete = percentComplete;
     this.containerSvgElm
-      .style('transform', 'scale('+ percentComplete + ')')
-      .style('filter', 'grayscale('+ (1 - percentComplete) + ')')
-      .style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')');
+      //.style('transform', 'scale('+ percentComplete + ')')
+      //.style('filter', 'grayscale('+ (1 - percentComplete) + ')')
+      //.style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')');
   }
 
   setTokens(tokens) {
@@ -168,8 +168,8 @@ class CloudLayout {
       .attr("y2", function(d) { return d.target.y; });
 
     // Adjust existing words
-    text.transition()
-      .duration(animationDuration)
+    text//.transition()
+      //.duration(animationDuration)
       .attr('transform', this.nodeHelpers.transform)
       .style('font-size', fontSizer)
       .style('fill', this.nodeHelpers.color);
