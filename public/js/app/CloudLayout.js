@@ -72,7 +72,7 @@ class CloudLayout {
       , center = size.map((it) => it/2)
       , maxValue, nodes, tokensArray;
 
-    this.tokensToShow = Math.ceil(120/(1+Math.pow(Math.E, (-1*size[0]*size[1] + 125000)/200000)));
+    this.tokensToShow = Math.ceil(150/(1+Math.pow(Math.E, (-1*size[0]*size[1] + 164000)/65000)));
 
     tokensArray = tokensToArray(tokens).slice(0, this.tokensToShow);
     this.totalTokenFreqs = tokensArray.reduce(((prev, v) => prev + v.value), 0);
