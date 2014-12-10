@@ -41,7 +41,7 @@ class CloudLayout {
     this.containerGElm   = null;
   }
 
-  _renderSetContainer(container) {
+  setContainer(container) {
     if(container != this.container) {
       this.container = container;
       this.containerSvgElm = d3.select(container).append('svg');
@@ -49,7 +49,7 @@ class CloudLayout {
     }
   }
 
-  _renderSetSize(size) {
+  setSize(size) {
     var currSize = this.layout.size();
 
     if(size[0] != currSize[0] || size[1] != currSize[1]) {
@@ -61,14 +61,14 @@ class CloudLayout {
     }
   }
 
-  _renderSetPercentComplete(percentComplete) {
+  setPercentComplete(percentComplete) {
     this.containerSvgElm
       .style('transform', 'scale('+ percentComplete + ')')
       .style('filter', 'grayscale('+ (1 - percentComplete) + ')')
       .style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')');
   }
 
-  _renderSetTokens(tokens) {
+  setTokens(tokens) {
     var size = this.layout.size()
       , center = size.map((it) => it/2)
       , maxValue, nodes, tokensArray;
@@ -174,12 +174,12 @@ class CloudLayout {
   }
 
   render(container, size, tokens, percentComplete) {
-    this.layout.stop();
 
-    this._renderSetContainer(container);
-    this._renderSetSize(size);
-    this._renderSetPercentComplete(percentComplete);
-    this._renderSetTokens(tokens);
+    this.layout.stop();
+    this.setContainer(container);
+    this.setSize(size);
+    this.setPercentComplete(percentComplete);
+    this.setTokens(tokens);
 
     this.layout.start();
   }
