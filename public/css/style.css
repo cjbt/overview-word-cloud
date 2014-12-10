@@ -128,7 +128,6 @@ text {
   -webkit-transition: fill .5s;
   transition: fill .5s;
   line-height: 1em;
-  padding: 10px;
 }
 
 .with-selection text:not(.active) {
