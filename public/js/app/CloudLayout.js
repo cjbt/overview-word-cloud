@@ -29,7 +29,7 @@ class CloudLayout {
 
     this.fontScale = d3.scale.linear() 
       .domain([1, Infinity])
-      .range([9, 54]);
+      .range([10, 54]);
 
     this.toCenterScale = d3.scale.linear()
       .domain([1, Infinity])
@@ -70,16 +70,19 @@ class CloudLayout {
   setTokens(tokens) {
     var size = this.layout.size()
       , center = size.map((it) => it/2)
-      , maxValue, tokensArray, nodes, links, oldNodePositions, nTokensToShow;
+      , minValue, maxValue, tokensArray, nTokensToShow
+      , nodes, links, oldNodePositions;
 
-    nTokensToShow = Math.ceil(150/(1+Math.pow(Math.E, (-1*size[0]*size[1] + 164000)/65000)))*this.percentComplete;
+    nTokensToShow = Math.ceil(150/(1+Math.pow(Math.E, (-1*size[0]*size[1] + 140000)/65000)))*this.percentComplete;
     tokensArray = tokensToArray(tokens).slice(0, nTokensToShow);
     this.totalTokenFreqs = tokensArray.reduce(((prev, v) => prev + v.value), 0);
 
     // update the scales that depend on the max value
-    maxValue = Math.max.apply(null, tokensArray.map((d) => d.value));
-    this.fontScale.domain([1, maxValue]);
-    this.toCenterScale.domain([1, maxValue]);
+    let tokenValues = tokensArray.map((d) => d.value);
+    maxValue = Math.max.apply(null, tokenValues);
+    minValue = Math.min.apply(null, tokenValues);
+    this.fontScale.domain([minValue, maxValue]);
+    this.toCenterScale.domain([minValue, maxValue]);
 
     // Save the [x, y] of the existing nodes into an object, 
     // so we can keep their if they're still in the cloud.
@@ -219,7 +222,7 @@ class CloudLayout {
     if(rebuildCollisionHandler) {
       this._collisionFreeCompactor = this.nodeHelpers.collisionFreeCompactor(
         this.layout.nodes(),
-        5,
+        10,
         this.fontScale,
         this.toCenterScale
       );
@@ -234,7 +237,7 @@ CloudLayout.prototype.nodeHelpers = {
   text:       function(d)    { return d.text; },
   color:      function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; },
   fontSize:   function(fontScale, d) { return fontScale(d.value) + 'px'; },
-  visualSize: function(d, fontScale, leading = 1.36) { 
+  visualSize: function(d, fontScale, leading = 1.38) { 
     return [d.text.length*fontScale(d.value)*.55, fontScale(d.value)*leading];
   },
   collisionFreeCompactor: function(nodes, padding, fontScale, toCenterAdjustment) {
@@ -336,8 +339,8 @@ CloudLayout.prototype.nodeHelpers = {
             let distanceToMove = 
               r - quadDistanceToNearestEdge - nodeDistanceToNearestEdge;
 
-            let distanceX = distanceToMove*Math.cos(angle)*alpha*.1;
-            let distanceY = distanceToMove*Math.sin(angle)*alpha*.1;
+            let distanceX = distanceToMove*Math.cos(angle)*alpha*.2;
+            let distanceY = distanceToMove*Math.sin(angle)*alpha*.2;
 
             d.y -= distanceY;
             d.x += distanceX;
