@@ -12641,6 +12641,9 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
       cartesianToOffsets,
       fontsDonePromise,
       CloudLayout;
+  function distanceFromCenterToNearestEdgeAtAngle(canvasWidth, canvasHeight, angle) {
+    return Math.min(Math.abs(canvasWidth / Math.cos(angle)), Math.abs(canvasHeight / Math.sin(angle)));
+  }
   function tokensToArray(tokens) {
     return Object.keys(tokens).map((function(k) {
       return ({
@@ -12674,52 +12677,50 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
       CloudLayout = (function() {
         var CloudLayout = function CloudLayout() {
           var friction = arguments[0] !== (void 0) ? arguments[0] : .9;
-          var $__0 = this;
-          this.layout = d3.layout.force().friction(friction).gravity(0).on('tick', this._tick.bind(this));
-          this.layout.charge(((function(d, i) {
-            var size = $__0.layout.size();
-            return (-.15 * (120 / $__0.tokensToShow) * size[0] * size[1] * d.value) / $__0.totalTokenFreqs;
-          })));
+          this.layout = d3.layout.force().friction(friction).gravity(0).charge(0).on('tick', this._tick.bind(this));
+          this.percentComplete = 0;
           this.totalTokenFreqs = null;
-          this.tokensToShow = null;
-          this.fontScale = d3.scale.linear().domain([1, Infinity]).range([7, 45]);
+          this.fontScale = d3.scale.linear().domain([1, Infinity]).range([9, 54]);
           this.toCenterScale = d3.scale.linear().domain([1, Infinity]).range([0, 1]);
           this.container = null;
           this.containerSvgElm = null;
           this.containerGElm = null;
         };
         return ($traceurRuntime.createClass)(CloudLayout, {
-          _renderSetContainer: function(container) {
+          setContainer: function(container) {
             if (container != this.container) {
               this.container = container;
               this.containerSvgElm = d3.select(container).append('svg');
               this.containerGElm = this.containerSvgElm.append('g');
             }
           },
-          _renderSetSize: function(size) {
+          setSize: function(size) {
             var currSize = this.layout.size();
             if (size[0] != currSize[0] || size[1] != currSize[1]) {
               this.layout.size(size);
-              this.fontScale.range([7, 40]);
               this.container.style.width = size[0] + 'px';
               this.container.style.height = size[1] + 'px';
               this.containerSvgElm.attr('width', size[0]).attr('height', size[1]);
             }
           },
-          _renderSetPercentComplete: function(percentComplete) {
-            this.containerSvgElm.style('transform', 'scale(' + percentComplete + ')').style('filter', 'grayscale(' + (1 - percentComplete) + ')').style('-webkit-filter', 'grayscale(' + (1 - percentComplete) + ')');
+          setPercentComplete: function(percentComplete) {
+            this.percentComplete = percentComplete;
+            this.containerSvgElm;
           },
-          _renderSetTokens: function(tokens) {
+          setTokens: function(tokens) {
             var $__0 = this;
             var size = this.layout.size(),
                 center = size.map((function(it) {
                   return it / 2;
                 })),
                 maxValue,
+                tokensArray,
                 nodes,
-                tokensArray;
-            this.tokensToShow = Math.ceil(120 / (1 + Math.pow(Math.E, (-1 * size[0] * size[1] + 125000) / 200000)));
-            tokensArray = tokensToArray(tokens).slice(0, this.tokensToShow);
+                links,
+                oldNodePositions,
+                nTokensToShow;
+            nTokensToShow = Math.ceil(150 / (1 + Math.pow(Math.E, (-1 * size[0] * size[1] + 164000) / 65000))) * this.percentComplete;
+            tokensArray = tokensToArray(tokens).slice(0, nTokensToShow);
             this.totalTokenFreqs = tokensArray.reduce(((function(prev, v) {
               return prev + v.value;
             })), 0);
@@ -12728,13 +12729,32 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
             })));
             this.fontScale.domain([1, maxValue]);
             this.toCenterScale.domain([1, maxValue]);
-            nodes = tokensArray.map((function(d) {
-              var angle = 2 * Math.PI * ((d.value % 360) / 360);
-              var distanceToEdgeAtAngle = Math.min(Math.abs(center[0] / Math.cos(angle)), Math.abs(center[1] / Math.sin(angle)));
-              var offsets = cartesianToOffsets(polarToCartesian([distanceToEdgeAtAngle * (1 - $__0.toCenterScale(d.value)), angle]), center);
-              d.x = offsets[0];
-              d.y = offsets[1];
-              return d;
+            oldNodePositions = this.layout.nodes().reduce((function(d, prev) {
+              prev[d.key] = [d.x, d.y];
+              return prev;
+            }), {});
+            nodes = tokensArray.map((function(node, i) {
+              var $__2,
+                  $__3;
+              if (oldNodePositions[node.text]) {
+                ($__2 = oldNodePositions[node.text], node.x = $__2[0], node.y = $__2[1], $__2);
+              } else {
+                var angle = 2 * Math.PI * ((node.value % 360) / 360);
+                var distanceToEdgeAtAngle = distanceFromCenterToNearestEdgeAtAngle(center[0], center[1], angle);
+                var r = distanceToEdgeAtAngle * (1 - $__0.toCenterScale(node.value));
+                ($__3 = cartesianToOffsets(polarToCartesian([r, angle]), center), node.x = $__3[0], node.y = $__3[1], $__3);
+              }
+              node.index = i;
+              return node;
+            }));
+            this.links = d3.geom.voronoi().x((function(d) {
+              return d.x;
+            })).y((function(d) {
+              return d.y;
+            })).links(nodes);
+            this.links.forEach((function(link) {
+              (link.source.linkIndices || (link.source.linkIndices = [])).push(link.target.index);
+              (link.target.linkIndices || (link.target.linkIndices = [])).push(link.source.index);
             }));
             this.layout.nodes(nodes);
           },
@@ -12743,43 +12763,67 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
             var animationDuration = 500,
                 fontStack = "'Open Sans', Helvetica, Arial, sans-serif",
                 size = this.layout.size(),
+                alpha = this.layout.alpha(),
                 center = size.map((function(it) {
                   return it / 2;
                 })),
                 nodes = this.layout.nodes(),
                 fontSizer = this.nodeHelpers.fontSize.bind(null, this.fontScale),
-                buffer = 8,
-                gravity = (function(distance, strength) {
-                  return Math.pow(Math.abs(distance), strength) * (distance < 0 ? -1 : 1);
-                });
+                visualSize = (function(d) {
+                  return $__0.nodeHelpers.visualSize(d, $__0.fontScale);
+                }),
+                buffer = 8;
             nodes.forEach((function(d, i) {
-              var nodeSize = $__0.nodeHelpers.visualSize(d, $__0.fontScale);
-              var amount = $__0.toCenterScale(d.value);
-              var dxFromCenter = center[0] - d.x;
-              var dyFromCenter = center[1] - d.y;
-              var thisBufferX = buffer + nodeSize[0] / 2 + size[0] * .1 * amount;
-              var thisBufferY = buffer + nodeSize[1] / 2 + size[0] * .1 * amount;
-              d.x += gravity(dxFromCenter, .93) * event.alpha * (.7 * center[1] / center[0] + .3);
-              d.y += gravity(dyFromCenter, .93) * event.alpha * (.7 * center[0] / center[1] + .3);
+              $__0._collisionFreeCompactor(d, alpha);
+              var nodeSize = visualSize(d);
+              var thisBufferX = buffer + nodeSize[0] / 2;
+              var thisBufferY = buffer + nodeSize[1] / 2;
               d.x = Math.max(thisBufferX, Math.min(size[0] - thisBufferX, d.x));
               d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
             }));
             var text = this.containerGElm.selectAll('text').data(nodes, this.nodeHelpers.text);
-            text.transition().duration(animationDuration).attr('transform', this.nodeHelpers.transform).style('font-size', fontSizer).style('fill', this.nodeHelpers.color);
-            text.enter().append('text').text(this.nodeHelpers.text).attr('text-anchor', 'middle').attr('transform', this.nodeHelpers.transform).style('font-family', fontStack).style('font-size', fontSizer).style('fill', this.nodeHelpers.color).style('opacity', 1 - event.alpha);
+            var links = this.containerGElm.selectAll('line').data(this.links);
+            links.attr("x1", function(d) {
+              return d.source.x;
+            }).attr("y1", function(d) {
+              return d.source.y;
+            }).attr("x2", function(d) {
+              return d.target.x;
+            }).attr("y2", function(d) {
+              return d.target.y;
+            });
+            links.enter().append('line').attr("x1", function(d) {
+              return d.source.x;
+            }).attr("y1", function(d) {
+              return d.source.y;
+            }).attr("x2", function(d) {
+              return d.target.x;
+            }).attr("y2", function(d) {
+              return d.target.y;
+            });
+            text.attr('transform', this.nodeHelpers.transform).style('font-size', fontSizer).style('fill', this.nodeHelpers.color);
+            text.enter().append('text').attr('transform', this.nodeHelpers.transform).text(this.nodeHelpers.text).attr('text-anchor', 'middle').style('font-family', fontStack).style('font-size', fontSizer).style('fill', this.nodeHelpers.color).style('opacity', 1 - event.alpha);
             var exitGroup = this.containerSvgElm.append('g').attr('transform', this.containerGElm.attr('transform'));
             var exitGroupNode = exitGroup.node();
             text.exit().each(function() {
               exitGroupNode.appendChild(this);
             });
+            links.exit().each(function() {
+              exitGroupNode.appendChild(this);
+            });
             exitGroup.transition().duration(animationDuration).style('opacity', 0).remove();
           },
           render: function(container, size, tokens, percentComplete) {
+            var currSize = this.layout.size(),
+                rebuildCollisionHandler = (size[0] != currSize[0] || size[1] != currSize[1] || tokens != this.tokens);
             this.layout.stop();
-            this._renderSetContainer(container);
-            this._renderSetSize(size);
-            this._renderSetPercentComplete(percentComplete);
-            this._renderSetTokens(tokens);
+            this.setContainer(container);
+            this.setSize(size);
+            this.setPercentComplete(percentComplete);
+            this.setTokens(tokens);
+            if (rebuildCollisionHandler) {
+              this._collisionFreeCompactor = this.nodeHelpers.collisionFreeCompactor(this.layout.nodes(), 5, this.fontScale, this.toCenterScale);
+            }
             this.layout.start();
           }
         }, {});
@@ -12798,8 +12842,76 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
           return fontScale(d.value) + 'px';
         },
         visualSize: function(d, fontScale) {
-          var leading = arguments[2] !== (void 0) ? arguments[2] : 1.2;
-          return [d.text.length * fontScale(d.value), fontScale(d.value) * leading];
+          var leading = arguments[2] !== (void 0) ? arguments[2] : 1.36;
+          return [d.text.length * fontScale(d.value) * .55, fontScale(d.value) * leading];
+        },
+        collisionFreeCompactor: function(nodes, padding, fontScale, toCenterAdjustment) {
+          var $__0 = this;
+          var quadtree = d3.geom.quadtree(nodes);
+          var offsets = (function(node) {
+            var size = $__0.visualSize(node, fontScale);
+            return {
+              left: node.x - size[0] / 2 - padding,
+              right: node.x + size[0] / 2 + padding,
+              top: node.y - size[1] * .75 + padding,
+              bottom: node.y + size[1] * .25 + padding
+            };
+          });
+          var center = (function(offsets) {
+            return [offsets.left + (offsets.right - offsets.left) / 2, offsets.top + (offsets.bottom - offsets.top) / 2];
+          });
+          return function(d, alpha) {
+            var nodeOffsets = offsets(d);
+            quadtree.visit(function(quad, x1, y1, x2, y2) {
+              if (quad.point && (quad.point !== d)) {
+                var quadOffsets = offsets(quad.point);
+                var topNode = nodeOffsets.top <= quadOffsets.top ? d : quad.point;
+                var leftNode = nodeOffsets.left <= quadOffsets.left ? d : quad.point;
+                var overlapY = (topNode === d ? nodeOffsets.bottom - quadOffsets.top : quadOffsets.bottom - nodeOffsets.top);
+                var overlapX = (leftNode === d ? nodeOffsets.right - quadOffsets.left : quadOffsets.right - nodeOffsets.left);
+                if (overlapX >= 0 && overlapY >= 0) {
+                  var dimension = overlapY < overlapX ? 'y' : 'x';
+                  var shifts = {
+                    'x': overlapX * (d === leftNode ? -1 : 1),
+                    'y': overlapY * (d === topNode ? -1 : 1)
+                  };
+                  d[dimension] += shifts[dimension] / 2;
+                  quad.point[dimension] -= shifts[dimension] / 2;
+                  var nodeOffsetsShift = shifts[dimension] / 2;
+                  if (dimension == 'x') {
+                    nodeOffsets.left += nodeOffsetsShift;
+                    nodeOffsets.right += nodeOffsetsShift;
+                  } else {
+                    nodeOffsets.top += nodeOffsetsShift;
+                    nodeOffsets.bottom += nodeOffsetsShift;
+                  }
+                } else if (quad.point.linkIndices && quad.point.linkIndices.indexOf(d.index) !== -1) {
+                  var nodeCenter = center(nodeOffsets);
+                  var quadCenter = center(quadOffsets);
+                  var nodeWidth = (nodeOffsets.right - nodeOffsets.left) / 2;
+                  var quadWidth = (quadOffsets.right - quadOffsets.left) / 2;
+                  var nodeHeight = (nodeOffsets.bottom - nodeOffsets.top) / 2;
+                  var quadHeight = (quadOffsets.bottom - quadOffsets.top) / 2;
+                  var $__2 = cartesianToPolar(offsetsToCartesian(quadCenter, nodeCenter)),
+                      r = $__2[0],
+                      angle = $__2[1];
+                  var nodeDistanceToNearestEdge = distanceFromCenterToNearestEdgeAtAngle(nodeWidth, nodeHeight, angle);
+                  var quadDistanceToNearestEdge = distanceFromCenterToNearestEdgeAtAngle(quadWidth, quadHeight, angle);
+                  var distanceToMove = r - quadDistanceToNearestEdge - nodeDistanceToNearestEdge;
+                  var distanceX = distanceToMove * Math.cos(angle) * alpha * .1;
+                  var distanceY = distanceToMove * Math.sin(angle) * alpha * .1;
+                  d.y -= distanceY;
+                  d.x += distanceX;
+                  quad.x -= distanceX;
+                  quad.y += distanceY;
+                  nodeOffsets.top -= distanceY;
+                  nodeOffsets.bottom -= distanceY;
+                  nodeOffsets.left += distanceX;
+                  nodeOffsets.right += distanceX;
+                }
+              }
+            });
+          };
         }
       };
       $__export('default', CloudLayout);
