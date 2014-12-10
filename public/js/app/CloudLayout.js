@@ -25,8 +25,8 @@ class CloudLayout {
       .linkStrength(.5)
       .on('tick', this._tick.bind(this))
 
+    this.percentComplete = 0;
     this.totalTokenFreqs = null;
-    this.tokensToShow = null;
 
     this.fontScale = d3.scale.linear() 
       .domain([1, Infinity])
@@ -61,6 +61,7 @@ class CloudLayout {
   }
 
   setPercentComplete(percentComplete) {
+    this.percentComplete = percentComplete;
     this.containerSvgElm
       .style('transform', 'scale('+ percentComplete + ')')
       .style('filter', 'grayscale('+ (1 - percentComplete) + ')')
@@ -70,11 +71,10 @@ class CloudLayout {
   setTokens(tokens) {
     var size = this.layout.size()
       , center = size.map((it) => it/2)
-      , maxValue, nodes, tokensArray;
+      , maxValue, tokensArray, nodes, links, oldNodePositions, nTokensToShow;
 
-    this.tokensToShow = Math.ceil(150/(1+Math.pow(Math.E, (-1*size[0]*size[1] + 164000)/65000)));
-
-    tokensArray = tokensToArray(tokens).slice(0, this.tokensToShow);
+    nTokensToShow = Math.ceil(150/(1+Math.pow(Math.E, (-1*size[0]*size[1] + 164000)/65000)))*this.percentComplete;
+    tokensArray = tokensToArray(tokens).slice(0, nTokensToShow);
     this.totalTokenFreqs = tokensArray.reduce(((prev, v) => prev + v.value), 0);
 
     // update the scales that depend on the max value
