@@ -139,6 +139,23 @@ class CloudLayout {
     var text = this.containerGElm.selectAll('text')
       .data(nodes, this.nodeHelpers.text);
 
+    var links = this.containerGElm.selectAll('line')
+      .data(this.links);
+
+    // Adjust existing links
+    links
+      .attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+
+    // Add new links
+    links.enter().append('line')
+      .attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+
     // Adjust existing words
     text.transition()
       .duration(animationDuration)
@@ -163,6 +180,9 @@ class CloudLayout {
 
     // Remove old words
     text.exit()
+      .each(function() { exitGroupNode.appendChild(this); });
+
+    links.exit()
       .each(function() { exitGroupNode.appendChild(this); });
 
     exitGroup.transition()

@@ -9,6 +9,11 @@ h1 {
   font-style: italic;
 }
 
+.show-links line {
+  stroke: #888;
+  stroke-width: 1px;
+}
+
 button { 
   cursor: pointer;
   text-shadow: -1px -1px 1px #ffffff, -1px 1px 1px #ffffff, 1px -1px 1px #ffffff, 1px 1px 1px #ffffff;
