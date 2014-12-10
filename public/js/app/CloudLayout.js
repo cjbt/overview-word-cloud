@@ -29,7 +29,7 @@ class CloudLayout {
 
     this.fontScale = d3.scale.linear() 
       .domain([1, Infinity])
-      .range([7, 45]);
+      .range([9, 54]);
 
     this.toCenterScale = d3.scale.linear()
       .domain([1, Infinity])
