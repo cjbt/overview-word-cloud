@@ -4,6 +4,7 @@ var gulp = require('gulp')
   , builder = require('systemjs-builder');
 
 gulp.task('scripts', function() {
+  builder.reset();
   return builder.build('app/app', 'public/js/build.js', {
     config: {
       baseURL: path.resolve('public/js'),
