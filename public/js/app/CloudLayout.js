@@ -142,7 +142,7 @@ class CloudLayout {
       //enforce a hard bounding so nothing escapes
       var nodeSize = visualSize(d);
       var thisBufferX = buffer + nodeSize[0]/2;
-      var thisBufferY = buffer + nodeSize[1]/2;
+      var thisBufferY = buffer + nodeSize[1];
       d.x = Math.max(thisBufferX, Math.min(size[0] - thisBufferX, d.x));
       d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
     })
