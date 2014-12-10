@@ -22,7 +22,6 @@ class CloudLayout {
       .friction(friction)
       .gravity(0)
       .charge(0)
-      .linkStrength(.5)
       .on('tick', this._tick.bind(this))
 
     this.percentComplete = 0;
@@ -102,6 +101,14 @@ class CloudLayout {
       return d;
     });
 
+    // Generate links--not for d3, but for our custom forces.
+    this.links = d3.geom.voronoi().x(d => d.x).y(d => d.y).links(nodes);
+    this.links.forEach((link) => {
+      (link.source.linkIndices || (link.source.linkIndices = [])).push(link.target.index); 
+      (link.target.linkIndices || (link.target.linkIndices = [])).push(link.source.index);
+    }); 
+
+    // initialize the layout with these nodes
     this.layout
       .nodes(nodes);
   }
@@ -119,7 +126,7 @@ class CloudLayout {
 
     nodes.forEach((d, i) => {
       //prevent collisions
-      this._collisionHandler(d, alpha);
+      this._collisionFreeCompactor(d, alpha);
 
       //enforce a hard bounding so nothing escapes
       var nodeSize = visualSize(d);
@@ -179,10 +186,9 @@ class CloudLayout {
 
     //must do this after setTokens.
     if(rebuildCollisionHandler) {
-      this._collisionHandler = this.nodeHelpers.collisionHandler(
+      this._collisionFreeCompactor = this.nodeHelpers.collisionFreeCompactor(
         this.layout.nodes(),
         5,
-        size.map((it) => it/2),
         this.fontScale,
         this.toCenterScale
       );
@@ -200,82 +206,131 @@ CloudLayout.prototype.nodeHelpers = {
   visualSize: function(d, fontScale, leading = 1.36) { 
     return [d.text.length*fontScale(d.value)*.55, fontScale(d.value)*leading];
   },
-  collisionHandler: function(nodes, padding, center, fontScale, toCenterAdjustment) {
+  collisionFreeCompactor: function(nodes, padding, fontScale, toCenterAdjustment) {
     var quadtree = d3.geom.quadtree(nodes);
-    var coordinates = (node) => {
+    var offsets = (node) => {
       var size = this.visualSize(node, fontScale);
       return {
         left: node.x - size[0]/2 - padding,
         right: node.x + size[0]/2 + padding,
         top: node.y - size[1]*.75 + padding,    //.75 and .25 are an adjustment for 
         bottom: node.y + size[1]*.25 + padding, //descenders, as .x and .y refer to text-bottom.
-        width: size[0],
-        height: size[1]
       };
     };
 
-    return function(d, alpha) {
-      let nodeCoordinates = coordinates(d);
+    var center = (offsets) => [
+      offsets.left + (offsets.right-offsets.left)/2, 
+      offsets.top + (offsets.bottom - offsets.top)/2
+    ];
 
+    return function(d, alpha) {
+      let nodeOffsets = offsets(d);
       quadtree.visit(function(quad, x1, y1, x2, y2) {
         if (quad.point && (quad.point !== d)) {
-          let quadCoordinates = coordinates(quad.point);
-          let topNode  = nodeCoordinates.top <= quadCoordinates.top ? d : quad.point;
-          let leftNode = nodeCoordinates.left <= quadCoordinates.left ? d : quad.point;
+          let quadOffsets = offsets(quad.point);
+          let topNode  = nodeOffsets.top <= quadOffsets.top ? d : quad.point;
+          let leftNode = nodeOffsets.left <= quadOffsets.left ? d : quad.point;
 
           // This is the (top node's bottom - the bottom node's top), i.e. how
           // much you would need to move the top node up (or the bottom node down)
           // to end the overlap. A negative value means there's no overlap.
           let overlapY = (topNode === d ? 
-            nodeCoordinates.bottom - quadCoordinates.top :
-            quadCoordinates.bottom - nodeCoordinates.top
+            nodeOffsets.bottom - quadOffsets.top :
+            quadOffsets.bottom - nodeOffsets.top
           );
 
           // The equivalent calculation for x: how much we need to move 
           // the left node left (or the right node right) to end the overlap.
           let overlapX = (leftNode === d ? 
-            nodeCoordinates.right - quadCoordinates.left :
-            quadCoordinates.right - nodeCoordinates.left
+            nodeOffsets.right - quadOffsets.left :
+            quadOffsets.right - nodeOffsets.left
           );
 
           // Two points overlap only if they overlap in both x and y.
           if(overlapX >= 0 && overlapY >= 0) {
             // To end the collision, we're going to we're going to move 
             // the nodes along the dimension that requires less displacement.
-            //
             // It's tempting to try to only move one of the colliding nodes, 
             // e.g. only the one with the lower value, but doing this seems to 
             // bias the node placement so the whole graph ends up moving away
             // from the center.
             let dimension = overlapY < overlapX ? 'y' : 'x';
             let shifts = {
-              // below, we include alpha so the simlulation dies down faster.
-              // But we use sqrt(alpha) to give preventing collisions more 
-              // priority than if we just linearly multiplied by alpha.
-              // The 3.1623 multiplier is b/c sqrt(initial alpha)*3.1623 = 1.
-              'x': overlapX*(d === leftNode ? -1 : 1)*Math.sqrt(alpha)*3.1623,
-              'y': overlapY*(d === topNode ? -1 : 1)*Math.sqrt(alpha)*3.1623
+              'x': overlapX*(d === leftNode ? -1 : 1),//*Math.sqrt(alpha)*3.1623,
+              'y': overlapY*(d === topNode ? -1 : 1)//*Math.sqrt(alpha)*3.1623
             }
 
             d[dimension] += shifts[dimension]/2;
             quad.point[dimension] -= shifts[dimension]/2;
 
-            //keep nodeCoordinates in sync.
-            let nodeCoordinatesShift = shifts[dimension]/2;
+            //keep nodeOffsets in sync.
+            let nodeOffsetsShift = shifts[dimension]/2;
             if(dimension == 'x') {
-              nodeCoordinates.left += nodeCoordinatesShift;
-              nodeCoordinates.right += nodeCoordinatesShift;
+              nodeOffsets.left += nodeOffsetsShift;
+              nodeOffsets.right += nodeOffsetsShift;
             }
             else {
-              nodeCoordinates.top += nodeCoordinatesShift;
-              nodeCoordinates.bottom += nodeCoordinatesShift; 
+              nodeOffsets.top += nodeOffsetsShift;
+              nodeOffsets.bottom += nodeOffsetsShift; 
             }
+          }
+
+          // If the points don't overlap, pull them together.
+          // check for .linkIndices as occasionally we have a disconnected node.
+          else if(quad.point.linkIndices && quad.point.linkIndices.indexOf(d.index) !== -1) {
+            let nodeCenter = center(nodeOffsets);
+            let quadCenter = center(quadOffsets);
+            let nodeWidth  = (nodeOffsets.right - nodeOffsets.left)/2;
+            let quadWidth  = (quadOffsets.right - quadOffsets.left)/2;
+            let nodeHeight = (nodeOffsets.bottom - nodeOffsets.top)/2;
+            let quadHeight = (quadOffsets.bottom - quadOffsets.top)/2;
+
+            // Find the line segment between the two centroids, and capture it
+            // as the distance & angle between them relative to nodeCentroid.
+            let [r, angle] = cartesianToPolar(
+              offsetsToCartesian(quadCenter, nodeCenter)
+            );
+
+            // Now, of that line segment of length r, we don't want to count 
+            // parts that are contained within either word's bounds, as we're
+            // moving them together only to the extent that they don't overlap.
+            // So, we find the distance from each word's centroid to its nearest
+            // edge along angle, and we subtract those distances from r.
+            let nodeDistanceToNearestEdge = 
+              distanceFromCenterToNearestEdgeAtAngle(nodeWidth, nodeHeight, angle);
+
+            let quadDistanceToNearestEdge = 
+              distanceFromCenterToNearestEdgeAtAngle(quadWidth, quadHeight, angle);
+
+            let distanceToMove = 
+              r - quadDistanceToNearestEdge - nodeDistanceToNearestEdge;
+
+            let distanceX = distanceToMove*Math.cos(angle)*alpha*.1;
+            let distanceY = distanceToMove*Math.sin(angle)*alpha*.1;
+
+            d.y -= distanceY;
+            d.x += distanceX;
+
+            quad.x -= distanceX;
+            quad.y += distanceY;
+
+            nodeOffsets.top -= distanceY;
+            nodeOffsets.bottom -= distanceY;
+            nodeOffsets.left += distanceX;
+            nodeOffsets.right += distanceX;
           }
         }
       });
     }; 
   }
 };
+
+function distanceFromCenterToNearestEdgeAtAngle(canvasWidth, canvasHeight, angle) {
+  return Math.min(
+    Math.abs(canvasWidth/Math.cos(angle)),
+    Math.abs(canvasHeight/Math.sin(angle))
+  ); 
+}
 
 function tokensToArray(tokens) {
   return Object.keys(tokens)
