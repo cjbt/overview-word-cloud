@@ -3,7 +3,10 @@ import d3 from 'lib/d3'
 import {polarToCartesian, cartesianToPolar, offsetsToCartesian, cartesianToOffsets} from './utils'
 
 // Kick off the font loading, and get a Promise for its success.
-// (Right now we're not using this promise for anything.)
+// (Right now we're not using this promise for anything, bc we're
+// generating the cloud based on rough estimates of how much space
+// each word will take up, rather than typesetting it and measuring
+// the actual space. See CloudLayout.prototype.nodeHelpers.visualSize).
 var fontsDonePromise = new Promise((resolve, reject) => {
   WebFont.load({
     google: {families: ['Open Sans:400,700']},
@@ -54,7 +57,6 @@ class CloudLayout {
 
     if(size[0] != currSize[0] || size[1] != currSize[1]) {
       this.layout.size(size);
-      this.fontScale.range([7, 40]);
       this.container.style.width = size[0] + 'px';
       this.container.style.height = size[1] + 'px'; 
       this.containerSvgElm.attr('width', size[0]).attr('height', size[1]); 
@@ -78,7 +80,7 @@ class CloudLayout {
     tokensArray = tokensToArray(tokens).slice(0, this.tokensToShow);
     this.totalTokenFreqs = tokensArray.reduce(((prev, v) => prev + v.value), 0);
 
-    //update the scales that depend on the max value
+    // update the scales that depend on the max value
     maxValue = Math.max.apply(null, tokensArray.map((d) => d.value));
     this.fontScale.domain([1, maxValue]);
     this.toCenterScale.domain([1, maxValue]);
@@ -150,13 +152,13 @@ class CloudLayout {
 
     // Add new words
     text.enter().append('text')
+      .attr('transform', this.nodeHelpers.transform)
       .text(this.nodeHelpers.text)
       .attr('text-anchor', 'middle')
-      .attr('transform', this.nodeHelpers.transform)
       .style('font-family', fontStack)
       .style('font-size', fontSizer)
       .style('fill', this.nodeHelpers.color)
-      .style('opacity', 1-event.alpha)
+      .style('opacity', 1-event.alpha);
 
     var exitGroup = this.containerSvgElm.append('g')
       .attr('transform', this.containerGElm.attr('transform'));
