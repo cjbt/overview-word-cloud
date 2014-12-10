@@ -19,14 +19,11 @@ var fontsDonePromise = new Promise((resolve, reject) => {
 class CloudLayout {
   constructor(friction = .9) {
     this.layout = d3.layout.force()
-                    .friction(friction)
-                    .gravity(0)
-                    .on('tick', this._tick.bind(this));
-
-    this.layout.charge(((d, i) => {
-      var size = this.layout.size();
-      return (-.15*(120/this.tokensToShow)*size[0]*size[1]*d.value)/this.totalTokenFreqs;
-    }));
+      .friction(friction)
+      .gravity(0)
+      .charge(0)
+      .linkStrength(.5)
+      .on('tick', this._tick.bind(this))
 
     this.totalTokenFreqs = null;
     this.tokensToShow = null;
@@ -113,29 +110,21 @@ class CloudLayout {
     var animationDuration = 500
       , fontStack = "'Open Sans', Helvetica, Arial, sans-serif"
       , size = this.layout.size()
+      , alpha = this.layout.alpha()
       , center = size.map((it) => it/2)
       , nodes = this.layout.nodes()
       , fontSizer = this.nodeHelpers.fontSize.bind(null, this.fontScale)
-      , buffer = 8
-      , gravity = (distance, strength) => {
-          return Math.pow(Math.abs(distance), strength)*(distance < 0 ? -1 : 1)
-        };
+      , visualSize = (d) => this.nodeHelpers.visualSize(d, this.fontScale)
+      , buffer = 8;
 
     nodes.forEach((d, i) => {
-      var nodeSize = this.nodeHelpers.visualSize(d, this.fontScale);
-      var amount = this.toCenterScale(d.value);
-      var dxFromCenter = center[0] - d.x;
-      var dyFromCenter = center[1] - d.y;
-      var thisBufferX = buffer + nodeSize[0]/2 + size[0]*.1*amount; // divide by 2 bc d.x and d.y
-      var thisBufferY = buffer + nodeSize[1]/2 + size[0]*.1*amount; // refer to the point's center
-
-      // Move nodes toward center in proportion to their distance from it.
-      // This is basically a reimplementation of the gravity force, but it
-      // seems to work better with more unevenly distributed charges.
-      d.x += gravity(dxFromCenter, .93)*event.alpha*(.7*center[1]/center[0] + .3);
-      d.y += gravity(dyFromCenter, .93)*event.alpha*(.7*center[0]/center[1] + .3);
+      //prevent collisions
+      this._collisionHandler(d, alpha);
 
       //enforce a hard bounding so nothing escapes
+      var nodeSize = visualSize(d);
+      var thisBufferX = buffer + nodeSize[0]/2;
+      var thisBufferY = buffer + nodeSize[1]/2;
       d.x = Math.max(thisBufferX, Math.min(size[0] - thisBufferX, d.x));
       d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
     })
@@ -176,12 +165,28 @@ class CloudLayout {
   }
 
   render(container, size, tokens, percentComplete) {
+    var currSize = this.layout.size()
+      , rebuildCollisionHandler = (
+          size[0] != currSize[0] || size[1] != currSize[1] ||
+          tokens != this.tokens
+    );
 
     this.layout.stop();
     this.setContainer(container);
     this.setSize(size);
     this.setPercentComplete(percentComplete);
     this.setTokens(tokens);
+
+    //must do this after setTokens.
+    if(rebuildCollisionHandler) {
+      this._collisionHandler = this.nodeHelpers.collisionHandler(
+        this.layout.nodes(),
+        5,
+        size.map((it) => it/2),
+        this.fontScale,
+        this.toCenterScale
+      );
+    }
 
     this.layout.start();
   }
@@ -192,8 +197,83 @@ CloudLayout.prototype.nodeHelpers = {
   text:       function(d)    { return d.text; },
   color:      function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; },
   fontSize:   function(fontScale, d) { return fontScale(d.value) + 'px'; },
-  visualSize: function(d, fontScale, leading = 1.2) { 
-    return [d.text.length*fontScale(d.value), fontScale(d.value)*leading];
+  visualSize: function(d, fontScale, leading = 1.36) { 
+    return [d.text.length*fontScale(d.value)*.55, fontScale(d.value)*leading];
+  },
+  collisionHandler: function(nodes, padding, center, fontScale, toCenterAdjustment) {
+    var quadtree = d3.geom.quadtree(nodes);
+    var coordinates = (node) => {
+      var size = this.visualSize(node, fontScale);
+      return {
+        left: node.x - size[0]/2 - padding,
+        right: node.x + size[0]/2 + padding,
+        top: node.y - size[1]*.75 + padding,    //.75 and .25 are an adjustment for 
+        bottom: node.y + size[1]*.25 + padding, //descenders, as .x and .y refer to text-bottom.
+        width: size[0],
+        height: size[1]
+      };
+    };
+
+    return function(d, alpha) {
+      let nodeCoordinates = coordinates(d);
+
+      quadtree.visit(function(quad, x1, y1, x2, y2) {
+        if (quad.point && (quad.point !== d)) {
+          let quadCoordinates = coordinates(quad.point);
+          let topNode  = nodeCoordinates.top <= quadCoordinates.top ? d : quad.point;
+          let leftNode = nodeCoordinates.left <= quadCoordinates.left ? d : quad.point;
+
+          // This is the (top node's bottom - the bottom node's top), i.e. how
+          // much you would need to move the top node up (or the bottom node down)
+          // to end the overlap. A negative value means there's no overlap.
+          let overlapY = (topNode === d ? 
+            nodeCoordinates.bottom - quadCoordinates.top :
+            quadCoordinates.bottom - nodeCoordinates.top
+          );
+
+          // The equivalent calculation for x: how much we need to move 
+          // the left node left (or the right node right) to end the overlap.
+          let overlapX = (leftNode === d ? 
+            nodeCoordinates.right - quadCoordinates.left :
+            quadCoordinates.right - nodeCoordinates.left
+          );
+
+          // Two points overlap only if they overlap in both x and y.
+          if(overlapX >= 0 && overlapY >= 0) {
+            // To end the collision, we're going to we're going to move 
+            // the nodes along the dimension that requires less displacement.
+            //
+            // It's tempting to try to only move one of the colliding nodes, 
+            // e.g. only the one with the lower value, but doing this seems to 
+            // bias the node placement so the whole graph ends up moving away
+            // from the center.
+            let dimension = overlapY < overlapX ? 'y' : 'x';
+            let shifts = {
+              // below, we include alpha so the simlulation dies down faster.
+              // But we use sqrt(alpha) to give preventing collisions more 
+              // priority than if we just linearly multiplied by alpha.
+              // The 3.1623 multiplier is b/c sqrt(initial alpha)*3.1623 = 1.
+              'x': overlapX*(d === leftNode ? -1 : 1)*Math.sqrt(alpha)*3.1623,
+              'y': overlapY*(d === topNode ? -1 : 1)*Math.sqrt(alpha)*3.1623
+            }
+
+            d[dimension] += shifts[dimension]/2;
+            quad.point[dimension] -= shifts[dimension]/2;
+
+            //keep nodeCoordinates in sync.
+            let nodeCoordinatesShift = shifts[dimension]/2;
+            if(dimension == 'x') {
+              nodeCoordinates.left += nodeCoordinatesShift;
+              nodeCoordinates.right += nodeCoordinatesShift;
+            }
+            else {
+              nodeCoordinates.top += nodeCoordinatesShift;
+              nodeCoordinates.bottom += nodeCoordinatesShift; 
+            }
+          }
+        }
+      });
+    }; 
   }
 };
 
@@ -204,70 +284,3 @@ function tokensToArray(tokens) {
 }
 
 export default CloudLayout
-
-
-/* 
-       rebuildCollisionChecker = (
-        size[0] != currSize[0] || size[1] != currSize[1] ||
-        tokens != this.tokens
-      );    if(rebuildCollisionChecker) {
-      this._renderCollisionHandler = this.nodeHelpers.preventCollision(
-        .025, 
-        this.layout.nodes(),
-        0,
-        size.map((it) => it/2),
-        this.nodeHelpers.visualSize,
-        this.fontScale,
-        this.toCenterScale
-      );
-    }
-preventCollision: function(alpha, nodes, padding, center, visualSize, fontScale, toCenterAdjustment) {
-  var quadtree = d3.geom.quadtree(nodes);
-  return function(d) {
-    var nodeSize = visualSize(d, fontScale) 
-      , nx1 = d.x - (nodeSize[0] + padding)
-      , nx2 = d.x + (nodeSize[0] + padding)
-      , ny2 = d.y + (nodeSize[1] + padding)
-      , ny1 = d.y - (nodeSize[1] + padding);
-
-    quadtree.visit(function(quad, x1, y1, x2, y2) {
-      if (quad.point && (quad.point !== d)) {
-        var x = d.x - quad.point.x,
-            y = d.y - quad.point.y,
-            l = Math.sqrt(x * x + y * y),
-            r = nodeSize[0]/2 + visualSize(quad.point, fontScale)[0]/2 + padding,
-            moreImportantPoint, moreImportantPolar, moreImportantPointNew,
-            lessImportantPoint, lessImportantPolar, lessImportantPointNew,
-            moreImportantToCenterAmount;
-
-        if (l < r) {
-          l = (l - r) / l * alpha;
-          x *= l;
-          y *= l;
-
-          moreImportantPoint = d.value > quad.point.value ? d : quad.point;
-          moreImportantPolar = cartesianToPolar(offsetsToCartesian(moreImportantPoint, center));
-          moreImportantToCenterAmount = toCenterAdjustment(moreImportantPoint.value);
-
-          lessImportantPoint = d.value > quad.point.value ? quad.point : d;
-          lessImportantPolar = cartesianToPolar(offsetsToCartesian(lessImportantPoint, center));
-
-          //bring the important point toward the center and move the other away.
-          moreImportantPolar[0] -= 4//Math.sqrt((x*x) + (y*y))*moreImportantToCenterAmount
-          moreImportantPointNew = cartesianToOffsets(polarToCartesian(moreImportantPolar), center);
-          [moreImportantPoint.x, moreImportantPoint.y] = moreImportantPointNew;
-
-          lessImportantPolar[0] += //Math.sqrt((x*x) + (y*y))//*(1 - moreImportantToCenterAmount)
-          lessImportantPointNew = cartesianToOffsets(polarToCartesian(lessImportantPolar), center);
-          [lessImportantPoint.x, lessImportantPoint.y] = lessImportantPointNew;
-          /*
-          d.x -= x;
-          d.y -= y;
-          quad.point.x += x;
-          quad.point.y += y; *\/
-        }
-      }
-      return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
-    });
-  }; 
-}*/
