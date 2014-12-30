@@ -7,22 +7,20 @@ html(lang="en", class="no-js")
     script(src="static/js/lib/system.js")
     script(src="static/js/build.js")
     script.
-      var paramString = window.location.search.substring(1);
-      var queryParams = (function() {
-        var queryParams = {};
-        var paramStrings = window.location.search.substring(1).split("&");
-        paramStrings.forEach(function(paramString) {
-          var pair = paramString.split('='); 
-          queryParams[pair[0]] = decodeURIComponent(pair[1]); 
-        })
-        return queryParams;
-      }());
-
       System.config({
         baseURL: '/static/js'
       });
 
       System.import('app/app').then(function(app) {
+        var paramString = window.location.search.substring(1)
+          , queryParams = (function() {
+              return window.location.search.substring(1).split("&")
+                      .reduce(function(params, paramKeyValuePair) {
+                        var pair = paramKeyValuePair.split('='); 
+                        params[pair[0]] = decodeURIComponent(pair[1]); 
+                        return params;
+                      });
+            }());
         $(function() { app['default'](paramString, queryParams['server']) });
       });
 

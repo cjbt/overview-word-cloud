@@ -25,7 +25,6 @@ class CloudLayout {
       .on('tick', this._tick.bind(this))
 
     this.percentComplete = 0;
-    this.totalTokenFreqs = null;
 
     this.fontScale = d3.scale.linear() 
       .domain([1, Infinity])
@@ -75,7 +74,6 @@ class CloudLayout {
 
     nTokensToShow = Math.ceil(150/(1+Math.pow(Math.E, (-1*size[0]*size[1] + 140000)/65000)))*this.percentComplete;
     tokensArray = tokensToArray(tokens).slice(0, nTokensToShow);
-    this.totalTokenFreqs = tokensArray.reduce(((prev, v) => prev + v.value), 0);
 
     // update the scales that depend on the max value
     let tokenValues = tokensArray.map((d) => d.value);

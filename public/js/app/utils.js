@@ -35,6 +35,14 @@ function readPoint(point) {
   return point.x !== undefined ? [point.x, point.y] : [point.r, point.theta];
 }
 
+export function distance(a, b) {
+  [a, b] = [readPoint(a), readPoint(b)];
+  return Math.sqrt(
+    Math.pow(b[0]-a[0], 2) +
+    Math.pow(b[1]-a[1], 2)
+  );
+}
+
 export function polarToCartesian(point) {
   var [r, theta] = readPoint(point);
 
