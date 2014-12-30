@@ -84,8 +84,8 @@ class CloudLayout {
 
     // Save the [x, y] of the existing nodes into an object, 
     // so we can keep their if they're still in the cloud.
-    oldNodePositions = this.layout.nodes().reduce((d, prev) => { 
-      prev[d.key] = [d.x, d.y]; 
+    oldNodePositions = this.layout.nodes().reduce((prev, d) => { 
+      prev[d.text] = [d.x, d.y]; 
       return prev; 
     }, {});
 
