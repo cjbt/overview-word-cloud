@@ -116,9 +116,39 @@ class CloudLayout {
     // Generate links--not for d3, but for our custom forces.
     this.links = d3.geom.voronoi().x(d => d.x).y(d => d.y).links(nodes);
     this.links.forEach((link) => {
-      (link.source.linkIndices || (link.source.linkIndices = [])).push(link.target.index); 
-      (link.target.linkIndices || (link.target.linkIndices = [])).push(link.source.index);
+      //initialize the nodes
+      if(!link.source.linkIndices) {
+        link.source.linkIndices = [];
+        link.source.planarConstraints = [];
+      }
+
+      //initialize the nodes
+      if(!link.target.linkIndices) {
+        link.target.linkIndices = [];
+        link.target.planarConstraints = [];
+      }
+
+      link.source.linkIndices.push(link.target.index);
+      link.target.linkIndices.push(link.source.index);
     }); 
+
+    // Store each node's opposite edge in the initial layout, so that we can
+    // add a force to push the nodes back to a planar layout if they start to 
+    // deviate. Below, we can't just use d3.geom.voronoi.triangles because it 
+    // doesn't return a full triangulation--yet alone the same one as .links--
+    // when multiple are possible.
+    nodes.forEach(node => {
+      // for each pair of nodes this node links to, see if 
+      // they link to each other, in which case we have a triangle.
+      for(var i = 0, len = (node.linkIndices || []).length; i < len; i++) {
+        for(var j = i+1; j < len; j++) {
+          let pair = [nodes[node.linkIndices[i]], nodes[node.linkIndices[j]]];
+          if(linked(pair[0], pair[1])) {
+            node.planarConstraints.push(pair);
+          }
+        }
+      }
+    });
 
     // initialize the layout with these nodes
     this.layout
