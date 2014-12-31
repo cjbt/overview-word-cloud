@@ -18,5 +18,9 @@
     "morgan": "^1.5.0",
     "oboe": "^2.0.2"
   },
-  "subdomain": "overview-wordcloud"
+  "subdomain": "overview-wordcloud",
+  "devDependencies": {
+    "gulp": "^3.8.10",
+    "systemjs-builder": "^0.4.1"
+  }
 }
