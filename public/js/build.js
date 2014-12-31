@@ -12990,7 +12990,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                 nodes,
                 links,
                 oldNodePositions;
-            nTokensToShow = Math.ceil(150 / (1 + Math.pow(Math.E, (-1 * size[0] * size[1] + 140000) / 65000))) * this.percentComplete;
+            nTokensToShow = Math.ceil(150 / (1 + Math.pow(Math.E, (-1 * size[0] * size[1] / 85000 + 2.75))) * this.percentComplete);
             tokensArray = tokensToArray(tokens).slice(0, nTokensToShow);
             tokenValues = tokensArray.map((function(d) {
               return d.value;
