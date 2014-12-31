@@ -98,7 +98,7 @@ class CloudLayout {
 
       // Otherwise, generate initial position for the node.
       else {
-        let angle = 2*Math.PI*((node.value % 360)/360);
+        let angle = 2*Math.PI*((node.value % 360)/360) + (i/nTokensToShow)*.001;
 
         let distanceToEdgeAtAngle = 
           distanceFromCenterToNearestEdgeAtAngle(center[0], center[1], angle);
