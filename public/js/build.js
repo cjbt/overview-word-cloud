@@ -12907,29 +12907,6 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
   function distanceFromCenterToNearestEdgeAtAngle(canvasWidth, canvasHeight, angle) {
     return Math.min(Math.abs(canvasWidth / Math.cos(angle)), Math.abs(canvasHeight / Math.sin(angle)));
   }
-  function vertexSideOfEdge(vertex, edgeEndpoints, canvas) {
-    var $__2 = edgeEndpoints,
-        edgeNode1 = $__2[0],
-        edgeNode2 = $__2[1],
-        edgeSlope = (edgeNode2.y - edgeNode1.y) / (edgeNode2.x - edgeNode1.x),
-        lineContainingEdge = ((function(x) {
-          return edgeNode1.y + (x - edgeNode1.x) * edgeSlope;
-        })),
-        lineContainingEdgeInverse = ((function(y) {
-          return (y - edgeNode1.y + edgeSlope * edgeNode1.x) / edgeSlope;
-        }));
-    if (vertex.x < lineContainingEdgeInverse(0) && vertex.x < lineContainingEdgeInverse(canvas[1])) {
-      return 'L';
-    } else if (vertex.x > lineContainingEdgeInverse(0) && vertex.x > lineContainingEdgeInverse(canvas[1])) {
-      return "R";
-    } else if (vertex.y < lineContainingEdge(vertex.x)) {
-      return "T";
-    } else if (vertex.y > lineContainingEdge(vertex.x)) {
-      return "B";
-    } else {
-      console.log('fuck');
-    }
-  }
   function tokensToArray(tokens) {
     return Object.keys(tokens).map((function(k) {
       return ({
@@ -12965,11 +12942,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
         var CloudLayout = function CloudLayout() {
           var friction = arguments[0] !== (void 0) ? arguments[0] : .9;
           this.layout = d3.layout.force().friction(friction).gravity(0).charge(0).on('tick', this._tick.bind(this));
-          this.drag = this.layout.drag().on("dragstart", function(d) {
-            d3.select(this).classed("fixed", d.fixed = true);
-          });
           this.percentComplete = 0;
-          this.tickCount = 0;
           this.fontScale = d3.scale.linear().domain([1, Infinity]).range([10, 54]);
           this.toCenterScale = d3.scale.sqrt().domain([1, Infinity]).range([0, 1]);
           this.container = null;
@@ -13011,16 +12984,15 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                 }),
                 minValue,
                 maxValue,
-                tokensArray,
                 nTokensToShow,
+                tokensArray,
+                tokenValues,
                 nodes,
                 links,
                 oldNodePositions;
-            this.tickCount = 0;
-            this.stopped = false;
             nTokensToShow = Math.ceil(150 / (1 + Math.pow(Math.E, (-1 * size[0] * size[1] + 140000) / 65000))) * this.percentComplete;
             tokensArray = tokensToArray(tokens).slice(0, nTokensToShow);
-            var tokenValues = tokensArray.map((function(d) {
+            tokenValues = tokensArray.map((function(d) {
               return d.value;
             }));
             maxValue = Math.max.apply(null, tokenValues);
@@ -13034,10 +13006,10 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
             nodes = tokensArray.map((function(node, i) {
               var $__2,
                   $__3;
-              if (oldNodePositions[node.text] && $__0.percentComplete == 1) {
+              if (oldNodePositions[node.text]) {
                 ($__2 = oldNodePositions[node.text], node.x = $__2[0], node.y = $__2[1], $__2);
               } else {
-                var angle = 2 * Math.PI * ((node.value % 360) / 360);
+                var angle = 2 * Math.PI * ((node.value % 360) / 360) + (i / nTokensToShow) * .001;
                 var distanceToEdgeAtAngle = distanceFromCenterToNearestEdgeAtAngle(center[0], center[1], angle);
                 var r = distanceToEdgeAtAngle * (1 - $__0.toCenterScale(node.value));
                 ($__3 = cartesianToOffsets(polarToCartesian([r, angle]), center), node.x = $__3[0], node.y = $__3[1], $__3);
@@ -13064,7 +13036,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                 for (var j = i + 1; j < len; j++) {
                   var pair = [nodes[node.linkIndices[i]], nodes[node.linkIndices[j]]];
                   if (linked(pair[0], pair[1])) {
-                    node.planarConstraints.push([pair, vertexSideOfEdge(node, pair, size)]);
+                    node.planarConstraints.push(pair);
                   }
                 }
               }
@@ -13091,28 +13063,19 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                 visualSize = (function(d) {
                   return $__0.nodeHelpers.visualSize(d, $__0.fontScale);
                 }),
-                buffer = 8,
-                maxTicks = this.stopped ? 0 : 300;
-            if (this.tickCount < maxTicks) {
-              this.tickCount++;
-              console.log(this.tickCount);
-              nodes.forEach((function(d, i) {
-                $__0._collisionFreeCompactor(d, event.alpha);
-                var nodeSize = visualSize(d);
-                var thisBufferX = buffer + nodeSize[0] / 2;
-                var thisBufferY = buffer + nodeSize[1];
-                d.x = Math.max(thisBufferX, Math.min(size[0] - thisBufferX, d.x));
-                d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
-              }));
-            }
+                buffer = 8;
+            nodes.forEach((function(d, i) {
+              $__0._collisionFreeCompactor(d, event.alpha);
+              var nodeSize = visualSize(d);
+              var thisBufferX = buffer + nodeSize[0] / 2;
+              var thisBufferY = buffer + nodeSize[1];
+              d.x = Math.max(thisBufferX, Math.min(size[0] - thisBufferX, d.x));
+              d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
+            }));
             this._draw(event.alpha);
-            if (this.tickCount >= maxTicks) {
-              this.layout.stop();
-            }
           },
           _draw: function(alpha) {
-            var animationDuration = 500,
-                fontStack = "'Open Sans', Helvetica, Arial, sans-serif",
+            var fontStack = "'Open Sans', Helvetica, Arial, sans-serif",
                 fontSizer = this.nodeHelpers.fontSize.bind(null, this.fontScale),
                 nodes = this.layout.nodes();
             var text = this.containerGElm.selectAll('text').data(nodes, this.nodeHelpers.text);
@@ -13136,7 +13099,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
               return d.target.y;
             });
             text.attr('transform', this.nodeHelpers.transform).style('font-size', fontSizer).style('fill', this.nodeHelpers.color);
-            text.enter().append('text').attr('transform', this.nodeHelpers.transform).text(this.nodeHelpers.text).attr('text-anchor', 'middle').style('font-family', fontStack).style('font-size', fontSizer).style('fill', this.nodeHelpers.color).style('opacity', 1).call(this.drag);
+            text.enter().append('text').attr('transform', this.nodeHelpers.transform).text(this.nodeHelpers.text).attr('text-anchor', 'middle').style('font-family', fontStack).style('font-size', fontSizer).style('fill', this.nodeHelpers.color).style('opacity', 1);
             var exitGroup = this.containerSvgElm.append('g').attr('transform', this.containerGElm.attr('transform'));
             var exitGroupNode = exitGroup.node();
             text.exit().each(function() {
@@ -13145,7 +13108,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
             links.exit().each(function() {
               exitGroupNode.appendChild(this);
             });
-            exitGroup.transition().duration(animationDuration).style('opacity', 0).remove();
+            exitGroup.transition().duration(500).style('opacity', 0).remove();
           }
         }, {});
       }());
@@ -13181,12 +13144,10 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
             return [offsets.left + (offsets.right - offsets.left) / 2, offsets.top + (offsets.bottom - offsets.top) / 2];
           });
           return function(d, alpha) {
-            var nodeOffsets = offsets(d);
-            if (self.stopped) {
-              return;
-            }
-            for (var i = 0,
-                len = nodes.length; i < len; i++) {
+            var nodeOffsets = offsets(d),
+                i,
+                len;
+            for (i = 0, len = nodes.length; i < len; i++) {
               var currNode = nodes[i];
               if (currNode !== d) {
                 var currOffsets = offsets(currNode);
@@ -13235,19 +13196,6 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                   nodeOffsets.left += distanceX;
                   nodeOffsets.right += distanceX;
                 }
-              }
-            }
-            for (var i = 0,
-                len = (d.planarConstraints || []).length; i < len; i++) {
-              var $__3 = d.planarConstraints[i],
-                  targetEdge = $__3[0],
-                  targetSide = $__3[1],
-                  initialEdgeSlope = $__3[2];
-              var currentSide = vertexSideOfEdge(d, targetEdge, canvasSize);
-              if (currentSide !== targetSide) {
-                console.log(targetSide, currentSide, d.text, targetEdge.map((function(d) {
-                  return d.text;
-                })));
               }
             }
           };

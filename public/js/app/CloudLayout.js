@@ -1,6 +1,6 @@
 import WebFont from 'lib/webfont'
 import d3 from 'lib/d3'
-import {polarToCartesian, cartesianToPolar, offsetsToCartesian, cartesianToOffsets} from './utils'
+import {polarToCartesian, cartesianToPolar, offsetsToCartesian, cartesianToOffsets, distance} from './utils'
 
 // Kick off the font loading, and get a Promise for its success.
 // (Right now we're not using this promise for anything, bc we're
@@ -30,7 +30,7 @@ class CloudLayout {
       .domain([1, Infinity])
       .range([10, 54]);
 
-    this.toCenterScale = d3.scale.linear()
+    this.toCenterScale = d3.scale.sqrt()
       .domain([1, Infinity])
       .range([0, 1]);
 
@@ -69,14 +69,15 @@ class CloudLayout {
   setTokens(tokens) {
     var size = this.layout.size()
       , center = size.map((it) => it/2)
-      , minValue, maxValue, tokensArray, nTokensToShow
+      , xAccessor = d => d.x, yAccessor = d => d.y
+      , minValue, maxValue, nTokensToShow, tokensArray, tokenValues
       , nodes, links, oldNodePositions;
 
     nTokensToShow = Math.ceil(150/(1+Math.pow(Math.E, (-1*size[0]*size[1] + 140000)/65000)))*this.percentComplete;
     tokensArray = tokensToArray(tokens).slice(0, nTokensToShow);
 
     // update the scales that depend on the max value
-    let tokenValues = tokensArray.map((d) => d.value);
+    tokenValues = tokensArray.map((d) => d.value);
     maxValue = Math.max.apply(null, tokenValues);
     minValue = Math.min.apply(null, tokenValues);
     this.fontScale.domain([minValue, maxValue]);
@@ -114,7 +115,7 @@ class CloudLayout {
     });
 
     // Generate links--not for d3, but for our custom forces.
-    this.links = d3.geom.voronoi().x(d => d.x).y(d => d.y).links(nodes);
+    this.links = d3.geom.voronoi().x(xAccessor).y(yAccessor).links(nodes);
     this.links.forEach((link) => {
       //initialize the nodes
       if(!link.source.linkIndices) {
@@ -155,84 +156,6 @@ class CloudLayout {
       .nodes(nodes);
   }
 
-  _tick(event) {
-    var animationDuration = 500
-      , fontStack = "'Open Sans', Helvetica, Arial, sans-serif"
-      , size = this.layout.size()
-      , alpha = this.layout.alpha()
-      , center = size.map((it) => it/2)
-      , nodes = this.layout.nodes()
-      , fontSizer = this.nodeHelpers.fontSize.bind(null, this.fontScale)
-      , visualSize = (d) => this.nodeHelpers.visualSize(d, this.fontScale)
-      , buffer = 8;
-
-    nodes.forEach((d, i) => {
-      //prevent collisions
-      this._collisionFreeCompactor(d, alpha);
-
-      //enforce a hard bounding so nothing escapes
-      var nodeSize = visualSize(d);
-      var thisBufferX = buffer + nodeSize[0]/2;
-      var thisBufferY = buffer + nodeSize[1];
-      d.x = Math.max(thisBufferX, Math.min(size[0] - thisBufferX, d.x));
-      d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
-    })
-
-    var text = this.containerGElm.selectAll('text')
-      .data(nodes, this.nodeHelpers.text);
-
-    var links = this.containerGElm.selectAll('line')
-      .data(this.links);
-
-    // Adjust existing links
-    links
-      .attr("x1", function(d) { return d.source.x; })
-      .attr("y1", function(d) { return d.source.y; })
-      .attr("x2", function(d) { return d.target.x; })
-      .attr("y2", function(d) { return d.target.y; });
-
-    // Add new links
-    links.enter().append('line')
-      .attr("x1", function(d) { return d.source.x; })
-      .attr("y1", function(d) { return d.source.y; })
-      .attr("x2", function(d) { return d.target.x; })
-      .attr("y2", function(d) { return d.target.y; });
-
-    // Adjust existing words
-    text//.transition()
-      //.duration(animationDuration)
-      .attr('transform', this.nodeHelpers.transform)
-      .style('font-size', fontSizer)
-      .style('fill', this.nodeHelpers.color);
-
-    // Add new words
-    text.enter().append('text')
-      .attr('transform', this.nodeHelpers.transform)
-      .text(this.nodeHelpers.text)
-      .attr('text-anchor', 'middle')
-      .style('font-family', fontStack)
-      .style('font-size', fontSizer)
-      .style('fill', this.nodeHelpers.color)
-      .style('opacity', 1-event.alpha);
-
-    var exitGroup = this.containerSvgElm.append('g')
-      .attr('transform', this.containerGElm.attr('transform'));
-
-    var exitGroupNode = exitGroup.node();
-
-    // Remove old words
-    text.exit()
-      .each(function() { exitGroupNode.appendChild(this); });
-
-    links.exit()
-      .each(function() { exitGroupNode.appendChild(this); });
-
-    exitGroup.transition()
-      .duration(animationDuration)
-      .style('opacity', 0)
-      .remove();
-  }
-
   render(container, size, tokens, percentComplete) {
     var currSize = this.layout.size()
       , rebuildCollisionHandler = (
@@ -252,11 +175,93 @@ class CloudLayout {
         this.layout.nodes(),
         10,
         this.fontScale,
-        this.toCenterScale
+        this.toCenterScale.domain()[1],
+        size,
+        this
       );
     }
 
     this.layout.start();
+  }
+
+  _tick(event) {
+    var size = this.layout.size()
+      , nodes = this.layout.nodes()
+      , visualSize = (d) => this.nodeHelpers.visualSize(d, this.fontScale)
+      , buffer = 8;
+
+    nodes.forEach((d, i) => {
+      //prevent collisions
+      this._collisionFreeCompactor(d, event.alpha);
+
+      //enforce a hard bounding so nothing escapes
+      var nodeSize = visualSize(d);
+      var thisBufferX = buffer + nodeSize[0]/2;
+      var thisBufferY = buffer + nodeSize[1];
+      d.x = Math.max(thisBufferX, Math.min(size[0] - thisBufferX, d.x));
+      d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
+    });
+
+    this._draw(event.alpha);
+  }
+
+  _draw(alpha) {
+    var fontStack = "'Open Sans', Helvetica, Arial, sans-serif"
+      , fontSizer = this.nodeHelpers.fontSize.bind(null, this.fontScale)
+      , nodes = this.layout.nodes();
+
+    var text = this.containerGElm.selectAll('text')
+      .data(nodes, this.nodeHelpers.text);
+
+    var links = this.containerGElm.selectAll('line')
+      .data(this.links.slice(0));
+
+    // Adjust existing links
+    links
+      .attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+
+    // Add new links
+    links.enter().append('line')
+      .attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+
+    // Adjust existing words
+    text
+      .attr('transform', this.nodeHelpers.transform)
+      .style('font-size', fontSizer)
+      .style('fill', this.nodeHelpers.color);
+
+    // Add new words
+    text.enter().append('text')
+      .attr('transform', this.nodeHelpers.transform)
+      .text(this.nodeHelpers.text)
+      .attr('text-anchor', 'middle')
+      .style('font-family', fontStack)
+      .style('font-size', fontSizer)
+      .style('fill', this.nodeHelpers.color)
+      .style('opacity', 1);
+
+    var exitGroup = this.containerSvgElm.append('g')
+      .attr('transform', this.containerGElm.attr('transform'));
+
+    var exitGroupNode = exitGroup.node();
+
+    // Remove old words
+    text.exit()
+      .each(function() { exitGroupNode.appendChild(this); });
+
+    links.exit()
+      .each(function() { exitGroupNode.appendChild(this); });
+
+    exitGroup.transition()
+      .duration(500)
+      .style('opacity', 0)
+      .remove();
   }
 }
 
@@ -265,11 +270,10 @@ CloudLayout.prototype.nodeHelpers = {
   text:       function(d)    { return d.text; },
   color:      function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; },
   fontSize:   function(fontScale, d) { return fontScale(d.value) + 'px'; },
-  visualSize: function(d, fontScale, leading = 1.38) { 
+  visualSize: function(d, fontScale, leading = 1.35) { 
     return [d.text.length*fontScale(d.value)*.55, fontScale(d.value)*leading];
   },
-  collisionFreeCompactor: function(nodes, padding, fontScale, toCenterAdjustment) {
-    var quadtree = d3.geom.quadtree(nodes);
+  collisionFreeCompactor: function(nodes, padding, fontScale, maxImportance, canvasSize, self) {
     var offsets = (node) => {
       var size = this.visualSize(node, fontScale);
       return {
@@ -286,26 +290,33 @@ CloudLayout.prototype.nodeHelpers = {
     ];
 
     return function(d, alpha) {
-      let nodeOffsets = offsets(d);
-      quadtree.visit(function(quad, x1, y1, x2, y2) {
-        if (quad.point && (quad.point !== d)) {
-          let quadOffsets = offsets(quad.point);
-          let topNode  = nodeOffsets.top <= quadOffsets.top ? d : quad.point;
-          let leftNode = nodeOffsets.left <= quadOffsets.left ? d : quad.point;
+      var nodeOffsets = offsets(d), i, len;
+
+      // This loop starts at d.index, making the function (when it's used in a
+      // loop over all nodes) take (n^2)/2 iterations instead of n^2. Using a
+      // quadtree would be O(nlog(n)), but it doesn't work well, (without more
+      // sophistication, anyway) because the node's position as a point bears
+      // so little relation to its real position as a rectangle on screen.
+      for(i = 0, len = nodes.length; i < len; i++) {
+        let currNode = nodes[i];
+        if(currNode !== d) {
+          let currOffsets = offsets(currNode);
+          let topNode  = nodeOffsets.top <= currOffsets.top ? d : currNode;
+          let leftNode = nodeOffsets.left <= currOffsets.left ? d : currNode;
 
           // This is the (top node's bottom - the bottom node's top), i.e. how
           // much you would need to move the top node up (or the bottom node down)
           // to end the overlap. A negative value means there's no overlap.
           let overlapY = (topNode === d ? 
-            nodeOffsets.bottom - quadOffsets.top :
-            quadOffsets.bottom - nodeOffsets.top
+            nodeOffsets.bottom - currOffsets.top :
+            currOffsets.bottom - nodeOffsets.top
           );
 
           // The equivalent calculation for x: how much we need to move 
           // the left node left (or the right node right) to end the overlap.
           let overlapX = (leftNode === d ? 
-            nodeOffsets.right - quadOffsets.left :
-            quadOffsets.right - nodeOffsets.left
+            nodeOffsets.right - currOffsets.left :
+            currOffsets.right - nodeOffsets.left
           );
 
           // Two points overlap only if they overlap in both x and y.
@@ -318,39 +329,40 @@ CloudLayout.prototype.nodeHelpers = {
             // from the center.
             let dimension = overlapY < overlapX ? 'y' : 'x';
             let shifts = {
-              'x': overlapX*(d === leftNode ? -1 : 1),//*Math.sqrt(alpha)*3.1623,
-              'y': overlapY*(d === topNode ? -1 : 1)//*Math.sqrt(alpha)*3.1623
+              'x': overlapX*(d === leftNode ? -1 : 1),
+              'y': overlapY*(d === topNode ? -1 : 1)
             }
 
-            d[dimension] += shifts[dimension]/2;
-            quad.point[dimension] -= shifts[dimension]/2;
+            let shift = shifts[dimension]/2;
+            
+            d[dimension] += shift;
+            currNode[dimension] -= shift;
 
             //keep nodeOffsets in sync.
-            let nodeOffsetsShift = shifts[dimension]/2;
             if(dimension == 'x') {
-              nodeOffsets.left += nodeOffsetsShift;
-              nodeOffsets.right += nodeOffsetsShift;
+              nodeOffsets.left += shift;
+              nodeOffsets.right += shift;
             }
             else {
-              nodeOffsets.top += nodeOffsetsShift;
-              nodeOffsets.bottom += nodeOffsetsShift; 
+              nodeOffsets.top += shift;
+              nodeOffsets.bottom += shift; 
             }
           }
 
           // If the points don't overlap, pull them together.
           // check for .linkIndices as occasionally we have a disconnected node.
-          else if(quad.point.linkIndices && quad.point.linkIndices.indexOf(d.index) !== -1) {
+          else if(linked(currNode, d)) {
             let nodeCenter = center(nodeOffsets);
-            let quadCenter = center(quadOffsets);
+            let currCenter = center(currOffsets);
             let nodeWidth  = (nodeOffsets.right - nodeOffsets.left)/2;
-            let quadWidth  = (quadOffsets.right - quadOffsets.left)/2;
+            let currWidth  = (currOffsets.right - currOffsets.left)/2;
             let nodeHeight = (nodeOffsets.bottom - nodeOffsets.top)/2;
-            let quadHeight = (quadOffsets.bottom - quadOffsets.top)/2;
+            let currHeight = (currOffsets.bottom - currOffsets.top)/2;
 
             // Find the line segment between the two centroids, and capture it
             // as the distance & angle between them relative to nodeCentroid.
             let [r, angle] = cartesianToPolar(
-              offsetsToCartesian(quadCenter, nodeCenter)
+              offsetsToCartesian(currCenter, nodeCenter)
             );
 
             // Now, of that line segment of length r, we don't want to count 
@@ -361,20 +373,21 @@ CloudLayout.prototype.nodeHelpers = {
             let nodeDistanceToNearestEdge = 
               distanceFromCenterToNearestEdgeAtAngle(nodeWidth, nodeHeight, angle);
 
-            let quadDistanceToNearestEdge = 
-              distanceFromCenterToNearestEdgeAtAngle(quadWidth, quadHeight, angle);
+            let currDistanceToNearestEdge = 
+              distanceFromCenterToNearestEdgeAtAngle(currWidth, currHeight, angle);
 
             let distanceToMove = 
-              r - quadDistanceToNearestEdge - nodeDistanceToNearestEdge;
+              r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
 
-            let distanceX = distanceToMove*Math.cos(angle)*alpha*.2;
-            let distanceY = distanceToMove*Math.sin(angle)*alpha*.2;
+            let strength  = .5*Math.sqrt(d.value*currNode.value)/maxImportance;
+            let distanceX = distanceToMove*Math.cos(angle)*alpha*strength;
+            let distanceY = distanceToMove*Math.sin(angle)*alpha*strength;
 
             d.y -= distanceY;
             d.x += distanceX;
 
-            quad.x -= distanceX;
-            quad.y += distanceY;
+            currNode.x -= distanceX;
+            currNode.y += distanceY;
 
             nodeOffsets.top -= distanceY;
             nodeOffsets.bottom -= distanceY;
@@ -382,10 +395,17 @@ CloudLayout.prototype.nodeHelpers = {
             nodeOffsets.right += distanceX;
           }
         }
-      });
+      }
     }; 
   }
 };
+
+function linked(nodeA, nodeB) {
+  return (
+    nodeA.linkIndices && nodeA.linkIndices.indexOf(nodeB.index) !== -1 ||
+    nodeB.linkIndices && nodeB.linkIndices.indexOf(nodeA.index) !== -1
+  );
+}
 
 function distanceFromCenterToNearestEdgeAtAngle(canvasWidth, canvasHeight, angle) {
   return Math.min(
