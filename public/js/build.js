@@ -65,18 +65,6 @@ Z.prototype.load=function(a){a(this.k)};var $=new U(q);$.u.w.custom=function(a,b
   }).call(System.global);  return System.get("@@global-helpers").retrieveGlobal(__module.id, "WebFont");
 });
 
-System.register("lib/selectonic", ["lib/jquery"], false, function(__require, __exports, __module) {
-  System.get("@@global-helpers").prepareGlobal(__module.id, ["lib/jquery"]);
-  (function() {
-/*! Selectonic - v0.6.0 - 2014-07-19
-* https://github.com/anovi/selectonic
-* Copyright (c) 2014 Alexey Novichkov; Licensed MIT */
-
-!function(a,b,c){"use strict";function d(b,c,d){return this._schema=b,this._options={},this._callbacks={},this.set(a.extend({},c,d||{}),!0),this}function e(b,c){this._name=e.pluginName,this.el=b,this.$el=a(b),this.ui={},this._selected=0,this._isEnable=!0,this._keyModes={},this.options=new d(l,k,c);var f=this;this.options.on("filter",function(a){return f._itemsSelector="."+f.options.get("listClass")+" "+a,a}),this.options.on("autoScroll",function(a){return f._setScrolledElem(a),a}),this._itemsSelector="."+this.options.get("listClass")+" "+this.options.get("filter"),this._setScrolledElem(this.options.get("autoScroll")),this._init()}var f=a.fn.outerHeight?"outerHeight":"height";a.fn.jquery||a.fn.zepto||(a.fn.zepto=!0);var g=function(a,b,c){var d,e,f,g=null,h=0;c=c||{};var i=function(){h=c.leading===!1?0:new Date,g=null,f=a.apply(d,e)};return function(){var j=new Date;h||c.leading!==!1||(h=j);var k=b-(j-h);return d=this,e=arguments,0>=k?(clearTimeout(g),g=null,h=j,f=a.apply(d,e)):g||c.trailing===!1||(g=setTimeout(i,k)),f}},h=Array.prototype.indexOf||function(a){for(var b=0,c=this.length;c>b;b++)if(this[b]===a)return b;return-1},i=function(a,b){return a instanceof Array?h.call(a,b)>=0:!1},j=a(b.document);d.isCorrectType=function(a,b){var c=typeof a,d=null===a&&b.nullable;return b.type instanceof Array?i(b.type,c)||d:c===b.type||d},d.prototype.set=function(b,e){var f,g;for(f in b){var h=b[f],j=this._schema[f];if(j!==c){if(j.unchangeable&&!e)throw new Error('Option "'+f+'" could be setted once at the begining.');if(!d.isCorrectType(h,j)){var k='Option "'+f+'" must be '+(j.type instanceof Array?j.type.join(", "):j.type)+(j.nullable?" or null.":".");throw new TypeError(k)}if(j.values&&!i(j.values,h))throw new RangeError('Option "'+f+'" only could be in these values: "'+j.values.join('", "')+'".')}}for(f in b)(g=this._callbacks[f])&&(b[f]=g.call(this,b[f]));this._options=a.extend(this._options,b)},d.prototype.get=function(b){return b?this._options[b]:a.extend({},this._options)},d.prototype.on=function(a,b){this._callbacks[a]=b},d.prototype.off=function(a){this._callbacks[a]&&delete this._callbacks[a]};var k={filter:"> *",multi:!0,mouseMode:"standard",focusBlur:!1,selectionBlur:!1,handle:null,textSelection:!1,focusOnHover:!1,keyboard:!1,keyboardMode:"select",autoScroll:!0,loop:!1,preventInputs:!0,listClass:"j-selectable",focusClass:"j-focused",selectedClass:"j-selected",disabledClass:"j-disabled",create:null,before:null,focusLost:null,select:null,unselect:null,unselectAll:null,stop:null,destroy:null},l={filter:{type:"string"},multi:{type:"boolean"},mouseMode:{type:"string",values:["standard","mouseup","toggle"]},focusBlur:{type:"boolean"},selectionBlur:{type:"boolean"},handle:{type:"string",nullable:!0},textSelection:{type:"boolean"},focusOnHover:{type:"boolean"},keyboard:{type:"boolean"},keyboardMode:{type:"string",values:["select","toggle"]},autoScroll:{type:["boolean","string"]},loop:{type:"boolean"},preventInputs:{type:"boolean"},listClass:{type:"string",unchangeable:!0},focusClass:{type:"string",unchangeable:!0},selectedClass:{type:"string",unchangeable:!0},disabledClass:{type:"string",unchangeable:!0},create:{type:"function",nullable:!0},before:{type:"function",nullable:!0},focusLost:{type:"function",nullable:!0},select:{type:"function",nullable:!0},unselect:{type:"function",nullable:!0},unselectAll:{type:"function",nullable:!0},stop:{type:"function",nullable:!0},destroy:{type:"function",nullable:!0}};e.pluginName="selectonic",e.keyCode={DOWN:40,UP:38,SHIFT:16,END:35,HOME:36,PAGE_DOWN:34,PAGE_UP:33,A:65,SPACE:32,ENTER:13},e.getDataObject=function(b){return a(b).data("plugin_"+e.pluginName)},e.prototype._init=function(){this.$el.addClass(this.options.get("listClass")),this._bindEvents(),this.$el.data("plugin_"+e.pluginName,this),this._trigger("create")},e.prototype._setScrolledElem=function(b){var c;if(null===b||!1===b)return void delete this._scrolledElem;if("string"==typeof b){if(c=a(b),!(c.length>0))throw new Error('There are no elements that matches to selector - "'+b+'"');return void(this._scrolledElem=c[0])}this._scrolledElem=this.el},e.prototype._cancel=function(b,c){if(!c.wasCancelled){c.isCancellation=this._isPrevented=!0;var d=this;a.each(a(c.changedItems),function(e,f){c.prevItemsStates[e]?d._select(b,c,a(f),!0):d._unselect(b,c,a(f),!0)}),c.prevFocus&&this._setFocus(c.prevFocus),delete c.isCancellation,c.wasCancelled=!0}},e.prototype._bindEvents=function(){var a=this,b=this._name;this._mouseEvent=function(b){a._isEnable&&1===b.which&&a._mouseHandler.call(a,b)},this._keyboardEvent=function(b){a.options.get("keyboard")&&a._isEnable&&a._keyHandler.call(a,b)},this._selectstartEvent=function(){return a.options.get("textSelection")?void 0:!1},this._mousemoveEvent=g(function(b){a._isEnable&&a.options&&a.options.get("focusOnHover")&&a._mousemoveHandler.call(a,b)},20),j.on("keydown."+b,this._keyboardEvent),j.on("keyup."+b,this._keyboardEvent),j.on("mousemove."+b,this._mousemoveEvent),j.on("click."+b,this._mouseEvent),j.on("mousedown."+b,this._mouseEvent),j.on("mouseup."+b,this._mouseEvent),this.$el.on("selectstart."+b,this._selectstartEvent)},e.prototype._unbindEvents=function(){var a=this._name;j.off("keydown."+a,this._keyboardEvent),j.off("keyup."+a,this._keyboardEvent),j.off("mousemove."+a,this._mousemoveEvent),j.off("click."+a,this._mouseEvent),j.off("mousedown."+a,this._mouseEvent),j.off("mouseup."+a,this._mouseEvent),this.$el.off("selectstart."+a,this._selectstartEvent)},e.prototype._getTarget=function(c){for(var d,e,f,g=c.target,h=this.options.get("handle");null!==g&&g!==this.el;)d=a(g),d.context=b.document,d.is(this._itemsSelector)&&(e=g),h&&d.is(h)&&(f=g),g=g.parentNode;return h&&g&&f?e:!h&&g?e:null},e.prototype._getItems=function(c,d,e){var f;switch(d){case"next":case"prev":for(var g=e.jquery?e:a(e),h=a.fn[d];;){if(g=h.call(g),0===g.length)break;if(g.context=b.document,g.is(this._itemsSelector))return g}return null;case"pageup":case"pagedown":return this._getNextPageElem(c,d,e);case"first":return f=c.allItems?c.allItems:this.$el.find(this.options.get("filter")),c.allItems=f,f.first();case"last":return f=c.allItems?c.allItems:this.$el.find(this.options.get("filter")),c.allItems=f,f.last();default:return f=c.allItems?c.allItems:this.$el.find(this.options.get("filter")),c.allItems=f,f}},e.prototype._getNextPageElem=function(c,d,e){var g,h,i,j,k,l=c.isShiftPageRange,m=this._scrolledElem||this.el,n=m.clientHeight,o=a(b)[f](),p=a(e),q=n>o,r=q?o:n,s=p[f](),t=s,u=s,v="pageup"===d?"prev":"next";for(l&&(v="pageup"===d?-1:1,j=this._getItems(c),c.rangeStart=i=j.index(e));;){if(l?(i+=v,k=i>=0?j.eq(i):null,g=k&&k.length>0?k:null):g=this._getItems(c,v,p),!g&&p[0]===e)break;if(!g)return l&&(c.rangeEnd=i-v),p;if(h=g[f](),u+=h,u>r)return t+h>r?(l&&(c.rangeEnd=i),g):(l&&(c.rangeEnd=i-v),p);t=h,p=g}return null},e.prototype._trigger=function(a,b,c){var d,e=this.options.get(a);if(e){if("create"===a||"destroy"===a)return e.call(this.$el);switch(d={},c.target&&(d.target=c.target),this.ui.focus&&(d.focus=this.ui.focus),a){case"select":d.items=c.selected;break;case"unselectAll":case"unselect":d.items=c.unselected;break;case"stop":c.wasCancelled||(d.items=c.changedItems)}e.call(this.$el,b||null,d)}},e.prototype._controller=function(a,b){var d;return b.changedItems=[],b.prevItemsStates=[],delete this._isPrevented,this._trigger("before",a,b),this._isPrevented?(this._cancel(a,b),void this._stop(a,b)):(b.wasSelected=this._selected>0,b.target&&b.isTargetWasSelected===c&&(b.isTargetWasSelected=this._getIsSelected(b.target)),b.isRangeSelect&&b.isTargetWasSelected&&b.target===this.ui.focus||(b.isRangeSelect?this._perfomRangeSelect(a,b):b.isMultiSelect?(d=b.isTargetWasSelected?this._unselect:this._select,d.call(this,a,b,b.items)):b.target&&!b.items&&"mouseover"===a.type||(b.target&&b.items?(this._selected&&1===this._selected&&this._getIsSelected(this.ui.focus)?this._unselect(a,b,this.ui.focus,b.isTargetWasSelected):this._selected&&this._unselectAll(a,b),this._select(a,b,b.items,b.isTargetWasSelected)):!b.target&&this._selected>0&&this.options.get("selectionBlur")&&this._unselectAll(a,b))),!this._selected&&b.wasSelected&&this._trigger("unselectAll",a,b),b.prevFocus=this.ui.focus?this.ui.focus:null,!b.target&&this.options.get("focusBlur")?this._blur(a,b):b.target&&!b.wasCancelled&&this._setFocus(b.target),void this._stop(a,b))},e.prototype._perfomRangeSelect=function(a,b){var c,d,e,f,g,h,i,j=b.rangeStart<b.rangeEnd,k=this._getItems(b),l=j?b.rangeStart:b.rangeEnd,m=j?b.rangeEnd:b.rangeStart;b.isNewSolidSelection?(d=k.slice(0,l),d=d.add(k.slice(m+1)),this._unselect(a,b,d),this._select(a,b,b.items)):this.ui.solidInitialElem&&!b.isTargetWasSelected&&(e=b.items.index(this.ui.solidInitialElem))>=0?(e=j?b.rangeStart+e:b.rangeEnd+e,f=e<b.rangeStart,g=b.rangeStart<e,h=e<b.rangeEnd,i=b.rangeEnd<e,(!h&&f||!i&&g)&&(d=g?k.slice(l,e):k.slice(e+1,m+1),d.length>0&&this._unselect(a,b,d)),(i&&!g||h&&!f)&&(d=i?k.slice(l,e):k.slice(e+1,m+1),d.length>0&&this._select(a,b,d))):(c=b.isTargetWasSelected?this._unselect:this._select,c.call(this,a,b,b.items))},e.prototype._changeItemsStates=function(b,c,d){var e=c>0,f=[],g=this;a(b).each(function(b,h){var i=g._getIsSelected(h),j=e?!i:i,k=h===d.target&&d.isTargetWasSelected;(!k||e||d.isMultiSelect||d.isRangeSelect)&&(j&&(d.isCancellation||(f.push(h),d.prevItemsStates.push(i)),g._selected+=c),a(h).toggleClass(g.options.get("selectedClass"),e))}),d.isCancellation||(d[e?"selected":"unselected"]=a(f),d.changedItems=d.changedItems.concat(f))},e.prototype._select=function(a,b,c,d){this._changeItemsStates(c,1,b),d||this._trigger("select",a,b),this._isPrevented&&!b.isCancellation&&this._cancel(a,b)},e.prototype._unselect=function(a,b,c,d){this._changeItemsStates(c,-1,b),d||this._trigger("unselect",a,b),this._isPrevented&&!b.isCancellation&&this._cancel(a,b)},e.prototype._unselectAll=function(a,b){var c,d;this._selected&&0!==this._selected&&(d=this._getItems(b),c=b.target&&b.isTargetWasSelected&&1===this._selected,this._unselect(a,b,d,c))},e.prototype._multiSelect=function(b){return b.isMultiSelect=!0,a(b.target)},e.prototype._rangeSelect=function(b){if(b.isRangeSelect=!0,b.target===this.ui.focus)return a(b.target);var c=b.allItems?b.allItems:this._getItems(b),d=c.index(b.target),e=c.index(this.ui.focus),f=e>d?c.slice(d,e):c.slice(e,d);return f.push(e>d?c[e]:c[d]),b.allItems=c,b.rangeStart=e,b.rangeEnd=d,f},e.prototype._getIsSelected=function(b){var c=this.options.get();return a(b).length<=1?a(b).hasClass(c.selectedClass):a.map(a(b),function(b){return a(b).hasClass(c.selectedClass)})},e.prototype._blur=function(b,c,d){!d&&this.ui.focus&&this._trigger("focusLost",b,c),this.ui.focus&&(a(this.ui.focus).removeClass(this.options.get("focusClass")),delete this.ui.focus)},e.prototype._setFocus=function(b){return b?(this.ui.focus&&a(this.ui.focus).removeClass(this.options.get("focusClass")),this.ui.focus=b,a(this.ui.focus).addClass(this.options.get("focusClass")),this.ui.focus):void 0},e.prototype._stop=function(a,b){this._trigger("stop",a,b),this._isPrevented&&this._cancel(a,b)},e.prototype._checkIfElem=function(b){var c;return b&&(b.jquery||b.zepto||b.nodeType)?(b=b.jquery||b.zepto?b:a(b),c=b.filter(this._itemsSelector),c.length>0?c:null):!1},e.prototype._checkIfSelector=function(a){var b;return a&&"string"==typeof a?(b=this.$el.find(a).filter(this._itemsSelector),b.jquery&&b.length>0?b:null):!1},e.prototype._keyHandler=function(b){if(this.options.get("keyboard")&&!(this.options.get("preventInputs")&&"INPUT"===b.target.tagName||"TEXTAREA"===b.target.tagName)){var c,d,f,g,h=b.which,i={};if("keyup"===b.type)return void(h===e.keyCode.SHIFT&&(delete this._shiftModeAction,delete this._keyModes.shift));if(h===e.keyCode.A&&this._isMulti(b)&&this.options.get("multi"))c=this._getItems(i),d=!0;else switch(h){case e.keyCode.DOWN:f="next",c=this._findNextTarget("next",i);break;case e.keyCode.UP:f="prev",c=this._findNextTarget("prev",i);break;case e.keyCode.HOME:f="prev",c=this._getItems(i,"first");break;case e.keyCode.END:f="next",c=this._getItems(i,"last");break;case e.keyCode.PAGE_DOWN:case e.keyCode.PAGE_UP:var j=h===e.keyCode.PAGE_DOWN;f=j?"next":"prev",g=j?"pagedown":"pageup",i.isShiftPageRange=this.options.get("multi")&&b.shiftKey&&!d,c=this._findNextTarget(g,i);break;case e.keyCode.SPACE:c=a(this.ui.focus);break;case e.keyCode.ENTER:this.options.get("multi")||(c=a(this.ui.focus))}c&&c.length>0?(b.preventDefault(),i.target=c[0],i.items=c,"toggle"===this.options.get("keyboardMode")?(h===e.keyCode.SPACE||h===e.keyCode.ENTER&&!this.options.get("multi")||delete i.items,this.options.get("multi")&&(i.isMultiSelect=!0),delete this.ui.solidInitialElem):this.ui.focus&&this.options.get("multi")&&b.shiftKey&&!d?(h===e.keyCode.END||h===e.keyCode.HOME||h===e.keyCode.PAGE_UP||h===e.keyCode.PAGE_DOWN?this._rangeVariator(i):this._multiVariator(i,h,f,c),this.ui.solidInitialElem||i.target===this.ui.focus||(this.ui.solidInitialElem=this.ui.focus,i.isNewSolidSelection=!0),this._shiftModeAction||(this._shiftModeAction="select"),this._keyModes.shift||(this._keyModes.shift=h)):delete this.ui.solidInitialElem,this._controller(b,i),this.scroll()):(i.prevItemsStates=[],this._trigger("before",b,i),this._trigger("stop",b,i))}},e.prototype._rangeVariator=function(a){var b=void 0===a.isFocusSelected?this._getIsSelected(this.ui.focus):a.isFocusSelected,c=a.isTargetWasSelected=this._getIsSelected(a.target);b||c?(a.items=this._rangeSelect(a),c&&(a.items=a.rangeStart<a.rangeEnd?a.items.slice(0,a.items.length-1):a.items.slice(1))):(a.target=a.items=this.ui.focus,a.isMultiSelect=!0)},e.prototype._multiVariator=function(a,b,c,d){var e,f=void 0===a.isFocusSelected?this._getIsSelected(this.ui.focus):a.isFocusSelected,g=this._getIsSelected(a.target),h=this._getItems(a,c,d),i=this._getIsSelected(h);if(this._keyModes.shift&&this._keyModes.shift!==b&&(this._keyModes.shift=this._shiftModeAction=null),this._keyModes.shift&&"select"===this._shiftModeAction&&g){for(;this._getIsSelected(a.items)&&a.items.length>0;)e=a.items,a.items=this._getItems(a,c,a.items);a.target=a.items?a.items:e}else g&&f&&!i?(this._keyModes.shift=this._shiftModeAction=null,a.items=this.ui.focus):f&&g?(a.items=this.ui.focus,this._shiftModeAction||(this._shiftModeAction="unselect")):f||(a.target=a.items=this.ui.focus);a.isMultiSelect=!0},e.prototype._findNextTarget=function(a,b){var c="next"===a||"pagedown"===a?"first":"last",d=this.ui.focus?this._getItems(b,a,this.ui.focus):this._getItems(b,c);return null!==d&&0!==d.length||!this.options.get("loop")||(d=this._getItems(b,c)),d},e.prototype._refreshBoxScroll=function(c){var d=a(c),e=c===b,g=e?d[f]():c.clientHeight,h=d.scrollTop(),i=e?0:d.offset().top,j=a(this.ui.focus),k=j[f](),l=e?j.offset().top:j.offset().top-i+h;h>l?d.scrollTop(l):l+k>h+g&&d.scrollTop(l+k-g)},e.prototype._isRange=function(a){return a.shiftKey||a.shiftKey&&a.ctrlKey||a.shiftKey&&a.metaKey},e.prototype._isMulti=function(a){return a.ctrlKey||a.metaKey},e.prototype._mouseHandler=function(b){var c=this.options.get(),d=b.type,e=this._isMulti(b),f=this._isRange(b),g={};if("mouseup"===c.mouseMode){if(g.target=this._getTarget(b),"click"===d||g.target&&"mousedown"===d)return}else{if("click"===d&&!this._mousedownOnItem)return;if("mousedown"!==d&&"click"!==d)return;if(g.target=this._getTarget(b),"mousedown"===d&&g.target&&(!c.multi||!e&&!f||"standard"!==c.mouseMode))return void(this._mousedownOnItem=g.target);if(delete this._mousedownOnItem,!g.target&&"click"===d)return}c.multi&&g.target&&(f&&this.ui.focus?g.items=this._rangeSelect(g):(e||"toggle"===c.mouseMode)&&(g.items=this._multiSelect(g))),g.target&&!g.items&&(g.items=a(g.target)),delete this.ui.solidInitialElem,this._controller(b,g)},e.prototype._mousemoveHandler=function(a){if(!this._isFocusOnHoverPrevented){var b={},c=this._getTarget(a);c?(delete this.ui.solidInitialElem,this._isHovered=!0,c!==this.ui.focus&&(b.target=c,this._controller(a,b))):this._isHovered&&(this._isHovered=!1,this._controller(a,b))}},e.prototype._preventMouseMove=function(){var a=this;this._isFocusOnHoverPrevented=!0,this._focusHoverTimeout&&(clearTimeout(this._focusHoverTimeout),delete this._focusHoverTimeout),this._focusHoverTimeout=setTimeout(function(){delete a._isFocusOnHoverPrevented,delete a._focusHoverTimeout},250)},e._callPublicMethod=function(b){var c,d,f=e.getDataObject(this);if(null===f||void 0===f)throw new Error("Element "+this[0]+" has no plugin "+e.pluginName);if(f[b]&&a.isFunction(f[b])&&(c=f[b]),c&&a.isFunction(c)&&"_"!==b.charAt(0))return d=Array.prototype.slice.call(arguments),d.shift(),c.apply(f,d);throw new Error('Plugin "'+e.pluginName+'" has no method "'+b+'"')},e.prototype.isEnabled=function(){return this._isEnable},e.prototype.option=function(b,c){var d=arguments.length;if(d>0&&"string"==typeof b){if(d>1){var e={};return e[b]=c,this.options.set(e),this.$el}return this.options.get(b)}if(d>0&&a.isPlainObject(b))return this.options.set(b),this.$el;if(0===d)return this.options.get();throw new Error('Format of "option" could be: "option" or "option","name" or "option","name",val or "option",{}')},e.prototype.destroy=function(){this._trigger("destroy"),this._unbindEvents(),this._focusHoverTimeout&&clearTimeout(this._focusHoverTimeout),this.ui.focus&&(a(this.ui.focus).removeClass(this.options.get("focusClass")),delete this.ui.focus),this._selected>0&&this.getSelected().removeClass(this.options.get("selectedClass")),this.$el.removeClass(this.options.get("disabledClass")),this.$el.removeClass(this.options.get("listClass")),this.options.off(),delete this.options,delete this._scrolledElem,delete this.ui.solidInitialElem,this.$el.removeData("plugin_"+e.pluginName),this.$el=null},e.prototype.unselect=function(a){return this.select(a,!0)},e.prototype.select=function(b,c){var d,e;if(c===!0&&void 0===b)e={isTargetWasSelected:!0,isMultiSelect:!0},e.items=this._getItems(e);else{if(d=this._checkIfElem(b),d===!1&&(d=this._checkIfSelector(b)),d===!1)throw new Error('You shold pass DOM element or selector to "select" method.');e={items:d.addClass?d:a(d),isTargetWasSelected:c?!0:!1,isMultiSelect:!0}}return delete this.ui.solidInitialElem,this._controller(null,e),this.$el},e.prototype.blur=function(){return this._controller(null,{target:null}),this.$el},e.prototype.getSelected=function(a){var b,c=this._getItems({}).filter("."+this.options.get("selectedClass"));if(a){b=[];for(var d=0;d<c.length;d++)b.push(c[d].id||null);return b&&b.length>0?b:null}return c},e.prototype.getSelectedId=function(){return this.getSelected(!0)},e.prototype.focus=function(a){var b;if(arguments.length>0){if(b=(b=this._checkIfElem(a))===!1?this._checkIfSelector(a):b,b&&(b.jquery||b.zepto))this._setFocus(b[0]);else if(b===!1)throw new Error("You shold pass DOM element or CSS selector to set focus or nothing to get it.");return this.$el}return this.ui.focus?this.ui.focus:null},e.prototype.scroll=function(){this._preventMouseMove(),this.ui.focus&&(this._scrolledElem&&this._refreshBoxScroll(this._scrolledElem),this._refreshBoxScroll(b))},e.prototype.enable=function(){return this._isEnable=!0,this.$el.removeClass(this.options.get("disabledClass")),this.$el},e.prototype.disable=function(){return this._isEnable=!1,this._isHovered=!1,this.$el.addClass(this.options.get("disabledClass")),this.$el},e.prototype.cancel=function(){return this._isPrevented=!0,this.$el},e.prototype.refresh=function(){var b=this.ui.focus;return b&&!a(b).is(":visible")&&delete this.ui.focus,this._selected=this.getSelected().length,this.$el},a.fn[e.pluginName]=function(a){return a&&a.charAt?e._callPublicMethod.apply(this,arguments):this.each(function(b,c){e.getDataObject(c)||new e(c,a)})},a.fn[e.pluginName].defaults=k,b["_"+e.pluginName]=e}(window.jQuery||window.Zepto,window);
-
-  }).call(System.global);  return System.get("@@global-helpers").retrieveGlobal(__module.id, false);
-});
-
 (function() {
 function define(){};  define.amd = {};
 !function(a, b) {
@@ -12822,6 +12810,120 @@ function define(){};  define.amd = {};
   }) : "object" == typeof module && module.exports && (module.exports = ta), this.d3 = ta;
 }();
 })();
+System.register("app/SearchMode", [], function($__export) {
+  "use strict";
+  var __moduleName = "app/SearchMode";
+  function require(path) {
+    return $traceurRuntime.require("app/SearchMode", path);
+  }
+  return {
+    setters: [],
+    execute: function() {
+      $__export('default', (function() {
+        var SearchMode = function SearchMode(cloud) {
+          this.cloud = cloud;
+        };
+        return ($traceurRuntime.createClass)(SearchMode, {
+          activate: function() {},
+          deactivate: function() {},
+          handleInclusionChange: function() {},
+          handleClick: function(e, server, $container) {
+            if (e.target.tagName.toLowerCase() !== 'text') {
+              window.parent.postMessage({
+                call: 'setDocumentListParams',
+                args: [{name: 'in document set'}]
+              }, server);
+              $container.removeClass('with-selection').find('.active').attr('class', '');
+            } else {
+              var term = e.target.textContent;
+              window.parent.postMessage({
+                call: 'setDocumentListParams',
+                args: [{
+                  q: term,
+                  name: 'with the word ' + term
+                }]
+              }, server);
+              $container.find('.active').removeAttr('class');
+              $(e.target).attr('class', 'active');
+              $container.addClass('with-selection');
+            }
+          },
+          getName: function() {
+            return "search-mode";
+          }
+        }, {});
+      }()));
+    }
+  };
+});
+
+System.register("app/EraserMode", [], function($__export) {
+  "use strict";
+  var __moduleName = "app/EraserMode";
+  function require(path) {
+    return $traceurRuntime.require("app/EraserMode", path);
+  }
+  return {
+    setters: [],
+    execute: function() {
+      $__export('default', (function() {
+        var EraserMode = function EraserMode(cloud, $hiddenWordsButton, $hiddenWordsDiv, $hiddenCounter) {
+          this.cloud = cloud;
+          this.$hiddenWordsButton = $hiddenWordsButton;
+          this.$hiddenWordsDiv = $hiddenWordsDiv;
+          this.$hiddenCounter = $hiddenCounter;
+          this.hasBeenActivated = false;
+        };
+        return ($traceurRuntime.createClass)(EraserMode, {
+          activate: function() {
+            this.$hiddenWordsButton.show();
+            this.$hiddenCounter.show();
+            if (this.hasBeenActivated) {}
+            this.hasBeenActivated = true;
+          },
+          deactivate: function() {
+            this.$hiddenWordsButton.hide();
+            this.$hiddenCounter.hide();
+          },
+          handleInclusionChange: function(included, excluded) {
+            for (var key in excluded) {
+              this.$hiddenWordsDiv.addClass('hasHidden');
+              return;
+            }
+            this.$hiddenWordsDiv.removeClass('hasHidden');
+          },
+          handleClick: function(e, server, $container) {
+            if (e.target === this.$hiddenWordsButton.get(0)) {
+              this.$hiddenWordsDiv.toggle();
+            } else if (e.target.tagName.toLowerCase() == 'li' && this.$hiddenWordsDiv.find(e.target).length) {
+              this.cloud.includeWord(e.target.textContent);
+              $(e.target).remove();
+              this.$hiddenCounter.html(parseInt(this.$hiddenCounter.html(), 10) - 1);
+            } else if (e.target.tagName.toLowerCase() !== 'text') {
+              this.$hiddenWordsDiv.hide();
+            } else {
+              var text = e.target.textContent,
+                  $target = $(e.target),
+                  offset = $target.offset();
+              $(e.target).animate({
+                'font-size': '0px',
+                'height': '0px',
+                'width': '0px'
+              }, 500);
+              this.$hiddenWordsDiv.find('ul').prepend('<li>' + text + '</li>');
+              this.$hiddenCounter.html(parseInt(this.$hiddenCounter.html(), 10) + 1);
+              this.cloud.excludeWord(text);
+            }
+          },
+          getName: function() {
+            return "eraser-mode";
+          }
+        }, {});
+      }()));
+    }
+  };
+});
+
 System.register("app/OverviewWordCloud", ["./utils"], function($__export) {
   "use strict";
   var __moduleName = "app/OverviewWordCloud";
@@ -12836,21 +12938,23 @@ System.register("app/OverviewWordCloud", ["./utils"], function($__export) {
     }],
     execute: function() {
       OverviewWordCloud = (function() {
-        var OverviewWordCloud = function OverviewWordCloud(DataStreamer) {
-          var $__0 = this;
+        var OverviewWordCloud = function OverviewWordCloud() {
           this.progress = 0;
           this.words = {};
           this.excluded = {};
-          DataStreamer().node("![*]", (function(data) {
-            $__0.words = data.tokens;
-            $__0._dispatch("data", [$__0.words, $__0.progress]);
-            $__0.updateProgress(data.progress);
-            return oboe.drop;
-          })).done((function() {
-            return $__0._dispatch("done", [$__0.words, $__0.progress]);
-          }));
         };
         return ($traceurRuntime.createClass)(OverviewWordCloud, {
+          start: function(DataStreamer) {
+            var $__0 = this;
+            DataStreamer().node("![*]", (function(data) {
+              $__0.words = data.tokens;
+              $__0._dispatch("data", [$__0.words, $__0.progress]);
+              $__0.updateProgress(data.progress);
+              return oboe.drop;
+            })).done((function() {
+              return $__0._dispatch("done", [$__0.words, $__0.progress]);
+            }));
+          },
           updateProgress: function(newProgress) {
             var oldProgress = this.progress;
             if (newProgress > oldProgress) {
@@ -13206,97 +13310,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
   };
 });
 
-System.register("app/ChipList", ["./utils", "lib/selectonic"], function($__export) {
-  "use strict";
-  var __moduleName = "app/ChipList";
-  function require(path) {
-    return $traceurRuntime.require("app/ChipList", path);
-  }
-  var Observable,
-      ChipList;
-  return {
-    setters: [function(m) {
-      Observable = m.Observable;
-    }, function(m) {}],
-    execute: function() {
-      ChipList = (function() {
-        var ChipList = function ChipList($container, id) {
-          var $__0 = this;
-          this.id = id;
-          this.listeners = {};
-          this.$container = $('<ul id="chiplist-' + id + '" class="chipList"></ul>');
-          this.$container.appendTo($container);
-          this.$container.selectonic({
-            multi: true,
-            keyboard: true,
-            focusBlur: true,
-            selectionBlur: true,
-            select: function(e, ui) {
-              ui.items.eq(0).focus();
-            }
-          });
-          this.$container.click((function(e) {
-            var $target = $(e.target),
-                selected,
-                prevLI;
-            if ($target.hasClass('delete')) {
-              var selected = $__0.$container.selectonic("getSelected"),
-                  prevLI = selected.eq(0).prev('li'),
-                  toSelect;
-              $__0.delete($target.parent('li').get(0));
-              toSelect = prevLI.length ? prevLI : $__0.$container.find('li').eq(0);
-              $__0.$container.selectonic('select', toSelect);
-            }
-          }));
-          this.$container.keydown((function(e) {
-            switch (e.which) {
-              case 8:
-                e.preventDefault();
-                var selected = $__0.$container.selectonic("getSelected"),
-                    prevLI = selected.eq(0).prev('li'),
-                    toSelect;
-                selected.each(function() {
-                  this.delete(this);
-                });
-                toSelect = prevLI.length ? prevLI : $__0.$container.find('li').eq(0);
-                $__0.$container.selectonic('select', toSelect);
-                break;
-              case 37:
-              case 39:
-                e.preventDefault();
-                e.which += 1;
-                $(e.target).trigger(e);
-            }
-          }));
-        };
-        return ($traceurRuntime.createClass)(ChipList, {
-          delete: function(item) {
-            var $item = $(item),
-                value = $item.text();
-            $item.remove();
-            this._dispatch("delete", [value]);
-            this.$container.selectonic("refresh");
-          },
-          prepend: function(value) {
-            $('<li class="chip" tabindex="0">' + '<span class="word">' + value + '</span>' + '<span class="delete"></span>' + '</li>').prependTo(this.$container);
-          },
-          deleteAll: function() {
-            this.$container.empty();
-            this.$container.selectonic("refresh");
-          },
-          getAll: function() {
-            return this.$container.find('li').map((function(i, it) {
-              return it.textContent;
-            })).get();
-          }
-        }, {});
-      }());
-      $__export('default', Observable(ChipList));
-    }
-  };
-});
-
-System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.custom", "./OverviewWordCloud", "./CloudLayout", "./ChipList"], function($__export) {
+System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.custom", "./OverviewWordCloud", "./CloudLayout", "./SearchMode", "./EraserMode"], function($__export) {
   "use strict";
   var __moduleName = "app/app";
   function require(path) {
@@ -13307,7 +13321,8 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
       Modernizr,
       Cloud,
       CloudLayout,
-      ChipList;
+      SearchMode,
+      EraserMode;
   return {
     setters: [function(m) {
       $ = m.default;
@@ -13320,7 +13335,9 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
     }, function(m) {
       CloudLayout = m.default;
     }, function(m) {
-      ChipList = m.default;
+      SearchMode = m.default;
+    }, function(m) {
+      EraserMode = m.default;
     }],
     execute: function() {
       $__export('default', function(paramString, server) {
@@ -13328,18 +13345,13 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
             $html = $('html'),
             $container = $('#cloud-container'),
             $progress = $('progress'),
-            $hideBtn = $('.delete'),
-            $hiddenBtn = $('#hidden-btn'),
-            $hiddenDiv = $('#hidden-list'),
-            wordsSelector = 'text';
-        var cloud = new Cloud((function() {
-          return oboe('/generate?' + paramString);
-        })),
+            $searchModeCntrl = $('#search-mode'),
+            $eraserModeCntrl = $('#eraser-mode');
+        var cloud = new Cloud(),
             layout = new CloudLayout(),
-            $hoveredWord;
-        var render = function() {
-          layout.render($container[0], [parseInt($window.width(), 10), parseInt($window.height(), 10)], cloud.words, cloud.progress);
-        };
+            searchMode = new SearchMode(cloud, server),
+            eraserMode = new EraserMode(cloud, $('#hidden-btn'), $('#hidden-list'), $('#hidden-count')),
+            currMode;
         cloud.observe("progress", function(newProgress) {
           $progress.attr('value', newProgress);
           render();
@@ -13350,93 +13362,41 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
         });
         cloud.observe("inclusionchange", function(included, excluded) {
           render();
-          for (var key in excluded) {
-            $hiddenDiv.addClass('hasHidden');
-            return;
+          currMode.handleInclusionChange(included, excluded);
+        });
+        $searchModeCntrl.click((function() {
+          return switchModes(searchMode);
+        }));
+        $eraserModeCntrl.click((function() {
+          return switchModes(eraserMode);
+        }));
+        $html.click((function(e) {
+          if ($(e.target).not($searchModeCntrl).not($eraserModeCntrl).length) {
+            currMode.handleClick(e, server, $container);
           }
-          $hiddenDiv.removeClass('hasHidden');
-        });
-        $hiddenDiv.on("click", "li", function(e) {
-          cloud.includeWord(e.target.textContent);
-          $(e.target).remove();
-        });
+        }));
+        cloud.start((function() {
+          return oboe('/generate?' + paramString);
+        }));
+        $searchModeCntrl.click();
         var resizeTimer;
         $window.resize(function() {
           clearTimeout(resizeTimer);
           resizeTimer = setTimeout(render, 100);
         });
-        $html.on("click", "#cloud-container, .close", (function(e) {
-          $hiddenDiv.hide();
-        }));
-        $html.click(function(e) {
-          handleClick(e, $container);
-        });
-        $html.on("mouseenter mouseleave", wordsSelector, function(e) {
-          var $target = $(e.target),
-              offset;
-          if (e.type != "mouseleave") {
-            offset = $target.offset();
-            $hoveredWord = $target;
-            $hideBtn.css({
-              'top': (offset.top) + 'px',
-              'left': (offset.left + $target.width()) + 'px',
-              'opacity': 1
-            });
-          } else {
-            setTimeout(function() {
-              $hideBtn.css('opacity', 0);
-              $hoveredWord = null;
-            }, 1000);
+        function switchModes(newMode) {
+          if (currMode) {
+            currMode.deactivate();
+            $html.removeClass(currMode.getName());
           }
-        });
-        $hideBtn.on("click", function(e) {
-          var text = $hoveredWord.text();
-          $hoveredWord.remove();
-          $hiddenDiv.find('ul').prepend('<li>' + text + '</li>');
-          cloud.excludeWord(text);
-        });
-        $hiddenBtn.click(function() {
-          $hiddenDiv.show();
-        });
-        var handleClick = (function() {
-          var oldMarginTop = 0,
-              oldMarginLeft = 0,
-              oldScaleFactor = 1;
-          return function(e) {
-            var $target = $(e.target),
-                term,
-                termRect,
-                windowWidth,
-                windowCenter,
-                marginTop,
-                marginLeft,
-                scaleFactor,
-                scaleChange;
-            if (e.target.tagName.toLowerCase() !== 'text') {
-              window.parent.postMessage({
-                call: 'setDocumentListParams',
-                args: [{name: 'in document set'}]
-              }, server);
-              $container.removeClass('with-selection').css({
-                'transform': 'scale(1)',
-                'margin-top': 0,
-                'margin-left': 0
-              }).find('.active').attr('class', '');
-            } else {
-              term = e.target.textContent;
-              window.parent.postMessage({
-                call: 'setDocumentListParams',
-                args: [{
-                  q: term,
-                  name: 'with the word ' + term
-                }]
-              }, server);
-              $container.find('.active').removeAttr('class');
-              $target.attr('class', 'active');
-              $container.addClass('with-selection');
-            }
-          };
-        }());
+          currMode = newMode;
+          $html.addClass(currMode.getName());
+          currMode.activate();
+        }
+        function render() {
+          layout.render($container[0], [parseInt($window.width(), 10), parseInt($window.height(), 10)], cloud.words, cloud.progress);
+        }
+        ;
       });
       ;
     }

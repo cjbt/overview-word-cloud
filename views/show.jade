@@ -26,16 +26,21 @@ html(lang="en", class="no-js")
     link(rel="stylesheet", href="static/css/style.css")
 
   body
-    progress(max="1.0", value="0")
-    button#hidden-btn Hidden Words
-    button.delete
+    #chrome
+      progress(max="1.0", value="0")
+      input(id="search-mode", type="radio", name="mode", "value"="search")
+      span Search Mode
+      input(id="eraser-mode", type="radio", name="mode", "value"="eraser")
+      span Eraser Mode
 
-    section#hidden-list
-      header
-        span.close
-        h1.accessibility Hidden Words
-        p.to-show.instructions Click on a word below to add it back to the cloud.
-        p.to-hide.instructions You haven&rsquo;t hidden any words yet. To hide a word, hover over it and click the close icon.
-      ul
+      span#hidden-count.initially-hidden 0
+      button#hidden-btn.initially-hidden Hidden Words
+      section#hidden-list.initially-hidden
+        header
+          span.close
+          h1.accessibility Hidden Words
+          p.to-show.instructions Click on a word below to add it back to the cloud.
+          p.to-hide.instructions You haven&rsquo;t hidden any words yet. To hide a word, just click on it while in Eraser Mode.
+        ul
 
     #cloud-container

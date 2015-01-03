@@ -1,11 +1,13 @@
 import {Observable} from './utils';
 
 class OverviewWordCloud {
-  constructor(DataStreamer) {
+  constructor() {
     this.progress = 0;
     this.words = {};
     this.excluded = {};
+  }
 
+  start(DataStreamer) {
     DataStreamer()
       .node("![*]", (data) => {
         this.words = data.tokens;
