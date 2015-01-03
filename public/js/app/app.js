@@ -3,7 +3,6 @@ import oboe from 'lib/oboe-browser'
 import Modernizr from 'lib/modernizr.custom'
 import Cloud from './OverviewWordCloud'
 import CloudLayout from './CloudLayout'
-import ChipList from './ChipList'
 
 export default function(paramString, server) {
   var $window    = $(window)

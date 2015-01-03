@@ -104,13 +104,6 @@ progress {
   margin-top: .33rem;
 }
 
-#cloud-editor ul {
-  position: relative;
-  max-height: 100%;
-  overflow: scroll;
-
-}
-
 #cloud-container {
   -webkit-transform-origin: 0% 0%;
   -webkit-transition-duration: .5s;
