@@ -14,12 +14,11 @@ html(lang="en", class="no-js")
       System.import('app/app').then(function(app) {
         var paramString = window.location.search.substring(1)
           , queryParams = (function() {
-              return window.location.search.substring(1).split("&")
-                      .reduce(function(params, paramKeyValuePair) {
-                        var pair = paramKeyValuePair.split('='); 
-                        params[pair[0]] = decodeURIComponent(pair[1]); 
-                        return params;
-                      });
+              return paramString.split("&").reduce(function(params, paramKVPair) {
+                  var pair = paramKVPair.split('='); 
+                  params[pair[0]] = decodeURIComponent(pair[1]); 
+                  return params;
+              }, {});
             }());
         $(function() { app['default'](paramString, queryParams['server']) });
       });
