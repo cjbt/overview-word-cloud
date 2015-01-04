@@ -5,21 +5,27 @@ import Cloud from './OverviewWordCloud'
 import CloudLayout from './CloudLayout'
 import SearchMode from './SearchMode'
 import EraserMode from './EraserMode'
+import ModeSwitcher from './ModeSwitcher'
+import Tooltip from 'lib/bootstrap.tooltip'
 
 export default function(paramString, server) {
   var $window    = $(window)
     , $html      = $('html')
     , $container = $('#cloud-container')
-    , $progress  = $('progress')
-    , $searchModeCntrl = $('#search-mode')
-    , $eraserModeCntrl = $('#eraser-mode');
+    , $progress  = $('progress');
 
   //generate our objects and hook up various event listeners
   var cloud  = new Cloud()
     , layout = new CloudLayout()
-    , searchMode = new SearchMode(cloud, server)
-    , eraserMode = new EraserMode(cloud, $('#hidden-btn'), $('#hidden-list'), $('#hidden-count'))
-    , currMode;
+    , modeSwitcher = new ModeSwitcher([{
+          "mode": new SearchMode(cloud, server),
+          "control": $('#search-btn'),
+          "default": true
+        }, {
+          "mode": new EraserMode(cloud, $('#hidden-btn'), $('#hidden-list'), $('#hidden-count')),
+          "control": $('#eraser-btn')
+        }
+      ]);
 
   cloud.observe("progress", function(newProgress) {
     $progress.attr('value', newProgress);
@@ -33,37 +39,22 @@ export default function(paramString, server) {
 
   cloud.observe("inclusionchange", function(included, excluded) {
     render();
-    currMode.handleInclusionChange(included, excluded);
+    modeSwitcher.currentMode.handleInclusionChange(included, excluded);
   });
 
-  $searchModeCntrl.click(() => switchModes(searchMode));
-  $eraserModeCntrl.click(() => switchModes(eraserMode));
-
   $html.click((e) => { 
-    if($(e.target).not($searchModeCntrl).not($eraserModeCntrl).length) {
-      currMode.handleClick(e, server, $container);  
-    }
+    modeSwitcher.currentMode.handleClick(e, server, $container);
   });
 
   //get things started
+  $('[data-toggle="tooltip"]').tooltip();
   cloud.start(() => oboe('/generate?' + paramString))
-  $searchModeCntrl.click();
 
   var resizeTimer;
   $window.resize(function() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(render, 100);
   });
-
-  function switchModes(newMode) {
-    if(currMode) { 
-      currMode.deactivate();
-      $html.removeClass(currMode.getName());
-    }
-    currMode = newMode;
-    $html.addClass(currMode.getName());
-    currMode.activate();
-  }
 
   function render() {
     layout.render(
