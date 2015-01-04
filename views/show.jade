@@ -7,19 +7,16 @@ html(lang="en", class="no-js")
     script(src="static/js/lib/system.js")
     script(src="static/js/build.js")
     script.
-      System.config({
-        baseURL: '/static/js'
-      });
+      System.config({baseURL: '/static/js'});
 
       System.import('app/app').then(function(app) {
         var paramString = window.location.search.substring(1)
           , queryParams = (function() {
-              return window.location.search.substring(1).split("&")
-                      .reduce(function(params, paramKeyValuePair) {
-                        var pair = paramKeyValuePair.split('='); 
-                        params[pair[0]] = decodeURIComponent(pair[1]); 
-                        return params;
-                      });
+              return paramString.split("&").reduce(function(params, paramKVPair) {
+                  var pair = paramKVPair.split('='); 
+                  params[pair[0]] = decodeURIComponent(pair[1]); 
+                  return params;
+              }, {});
             }());
         $(function() { app['default'](paramString, queryParams['server']) });
       });
@@ -27,28 +24,23 @@ html(lang="en", class="no-js")
     link(rel="stylesheet", href="static/css/style.css")
 
   body
-    progress(max="1.0", value="0")
-    button#hidden-btn Hidden Words
-    button.delete
+    #chrome
+      progress(max="1.0", value="0")
+      label#search-btn.btn.mode-btn(data-toggle="tooltip", data-placement="bottom" title="Click on a word to search for it in the document set while in this mode.")
+        input(id="search-mode", type="radio", name="mode", "value"="search", class="accessibility")
+        span Search Mode
+      label#eraser-btn.btn.mode-btn(data-toggle="tooltip", data-placement="bottom" title="Click on a word to hide it from the word cloud while in this mode.")
+        input(id="eraser-mode", type="radio", name="mode", "value"="eraser", class="accessibility")
+        span Eraser Mode
 
-    section#hidden-list
-      header
-        span.close
-        h1.accessibility Hidden Words
-        p.to-show.instructions Click on a word below to add it back to the cloud.
-        p.to-hide.instructions You haven&rsquo;t hidden any words yet. To hide a word, hover over it and click the close icon.
-      ul
+      span#hidden-count.initially-hidden 0
+      button#hidden-btn.initially-hidden Hidden Words
+      section#hidden-list.initially-hidden
+        header
+          span.close
+          h1 Hidden Words
+          p.to-show.instructions Click on a word below to add it back to the cloud.
+          p.to-hide.instructions You haven&rsquo;t hidden any words yet.
+        ul
 
     #cloud-container
-  //
-    button#edit(style="display:none") Edit
-    #cloud-editor(style="display:none")
-      form
-        fieldset
-          label Words to Show
-
-        fieldset
-          label Words to Hide
-
-      button#apply.
-        Save
