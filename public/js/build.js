@@ -13295,20 +13295,23 @@ System.register("app/SearchMode", [], function($__export) {
     setters: [],
     execute: function() {
       $__export('default', (function() {
-        var SearchMode = function SearchMode(cloud) {
+        var SearchMode = function SearchMode(cloud, $container) {
           this.cloud = cloud;
+          this.$container = $container;
         };
         return ($traceurRuntime.createClass)(SearchMode, {
-          activate: function() {},
-          deactivate: function() {},
           handleInclusionChange: function() {},
-          handleClick: function(e, server, $container) {
+          activate: function() {},
+          deactivate: function() {
+            this.$container.removeClass('with-selection').find('.active').attr('class', '');
+          },
+          handleClick: function(e, server) {
             if (e.target.tagName.toLowerCase() !== 'text') {
               window.parent.postMessage({
                 call: 'setDocumentListParams',
                 args: [{name: 'in document set'}]
               }, server);
-              $container.removeClass('with-selection').find('.active').attr('class', '');
+              this.$container.removeClass('with-selection').find('.active').attr('class', '');
             } else {
               var term = e.target.textContent;
               window.parent.postMessage({
@@ -13318,9 +13321,9 @@ System.register("app/SearchMode", [], function($__export) {
                   name: 'with the word ' + term
                 }]
               }, server);
-              $container.find('.active').removeAttr('class');
+              this.$container.find('.active').removeAttr('class');
               $(e.target).attr('class', 'active');
-              $container.addClass('with-selection');
+              this.$container.addClass('with-selection');
             }
           },
           getName: function() {
@@ -13347,14 +13350,11 @@ System.register("app/EraserMode", [], function($__export) {
           this.$hiddenWordsButton = $hiddenWordsButton;
           this.$hiddenWordsDiv = $hiddenWordsDiv;
           this.$hiddenCounter = $hiddenCounter;
-          this.hasBeenActivated = false;
         };
         return ($traceurRuntime.createClass)(EraserMode, {
           activate: function() {
             this.$hiddenWordsButton.show();
             this.$hiddenCounter.show();
-            if (this.hasBeenActivated) {}
-            this.hasBeenActivated = true;
           },
           deactivate: function() {
             this.$hiddenWordsButton.hide();
@@ -13894,7 +13894,7 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
         var cloud = new Cloud(),
             layout = new CloudLayout(),
             modeSwitcher = new ModeSwitcher([{
-              "mode": new SearchMode(cloud, server),
+              "mode": new SearchMode(cloud, $container),
               "control": $('#search-btn'),
               "default": true
             }, {
@@ -13914,7 +13914,7 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
           modeSwitcher.currentMode.handleInclusionChange(included, excluded);
         });
         $html.click((function(e) {
-          modeSwitcher.currentMode.handleClick(e, server, $container);
+          modeSwitcher.currentMode.handleClick(e, server);
         }));
         $('[data-toggle="tooltip"]').tooltip();
         cloud.start((function() {

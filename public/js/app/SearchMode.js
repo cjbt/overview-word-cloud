@@ -1,20 +1,26 @@
 export default class SearchMode {
-  constructor(cloud) {
+  constructor(cloud, $container) {
     this.cloud = cloud;
+    this.$container = $container;
   }
 
-  activate() {}
-  deactivate() {}
   handleInclusionChange() {}
+  activate() {}
 
-  handleClick(e, server, $container) {
+  deactivate() {
+    this.$container
+        .removeClass('with-selection')
+        .find('.active').attr('class', '');
+  }
+
+  handleClick(e, server) {
     if(e.target.tagName.toLowerCase() !== 'text') {  
       window.parent.postMessage({
         call: 'setDocumentListParams',
         args: [{name: 'in document set'}]
       }, server);
 
-      $container
+      this.$container
         .removeClass('with-selection')
         .find('.active').attr('class', '');
     }
@@ -29,11 +35,11 @@ export default class SearchMode {
 
       //manage classes. can't use $target.addClass()
       //because .className works differently in SVG
-      $container.find('.active').removeAttr('class')
+      this.$container.find('.active').removeAttr('class')
       $(e.target).attr('class', 'active');
       
       //start the animation
-      $container.addClass('with-selection');
+      this.$container.addClass('with-selection');
     }
   }
 

@@ -18,7 +18,7 @@ export default function(paramString, server) {
   var cloud  = new Cloud()
     , layout = new CloudLayout()
     , modeSwitcher = new ModeSwitcher([{
-          "mode": new SearchMode(cloud, server),
+          "mode": new SearchMode(cloud, $container),
           "control": $('#search-btn'),
           "default": true
         }, {
@@ -43,7 +43,7 @@ export default function(paramString, server) {
   });
 
   $html.click((e) => { 
-    modeSwitcher.currentMode.handleClick(e, server, $container);
+    modeSwitcher.currentMode.handleClick(e, server);
   });
 
   //get things started

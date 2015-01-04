@@ -4,19 +4,11 @@ export default class EraserMode {
     this.$hiddenWordsButton = $hiddenWordsButton;
     this.$hiddenWordsDiv = $hiddenWordsDiv;
     this.$hiddenCounter = $hiddenCounter;
-    this.hasBeenActivated = false;
   }
 
   activate() {
     this.$hiddenWordsButton.show();
     this.$hiddenCounter.show();
-    
-    //show a brief explainer the first time around
-    if(this.hasBeenActivated) {
-
-    }
-
-    this.hasBeenActivated = true;
   }
 
   deactivate() {
