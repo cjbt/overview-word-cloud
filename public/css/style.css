@@ -219,18 +219,21 @@ text {
   padding: 5px 0;
 }
 .tooltip-inner {
-  width: 180px;
+  width: 195px;
   padding: 3px 8px;
-  color: #ffffff;
+  color: #0d1223;
   text-align: center;
   text-decoration: none;
-  background-color: #000000;
+  background-color: #fef7df;
+  border: 1px solid #50ade5;
   border-radius: 4px;
+  box-shadow: 0 0px 20px 0px rgba(0, 0, 0, 0.2);
 }
-.tooltip-arrow {
+.tooltip-arrow, .tooltip-arrow::after {
   position: absolute;
   width: 0;
   height: 0;
+  display: block;
   border-color: transparent;
   border-style: solid;
 }
@@ -240,19 +243,28 @@ text {
   left: 50%;
   margin-left: -5px;
   border-width: 0 5px 5px;
-  border-bottom-color: #000000;
+  border-bottom-color: #50ade5;
 }
+.tooltip .tooltip-arrow::after {
+  border-bottom-color: #fef7df;
+  border-width: 10px;
+  content: " ";
+  top: 1px;
+  margin-left: -10px;
+  border-top-width: 0;
+}
+
 .tooltip.bottom-left .tooltip-arrow {
   top: 0;
   right: 5px;
   margin-top: -5px;
   border-width: 0 5px 5px;
-  border-bottom-color: #000000;
+  border-bottom-color: #50ade5;
 }
 .tooltip.bottom-right .tooltip-arrow {
   top: 0;
   left: 5px;
   margin-top: -5px;
   border-width: 0 5px 5px;
-  border-bottom-color: #000000;
+  border-bottom-color: #50ade5;
 }
