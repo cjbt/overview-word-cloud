@@ -13,7 +13,7 @@ export default class ModeSwitcher {
       this.modesMap[modeName] = it;
 
       control.click(() => this.switchTo(modeName));
-      control.hover(
+      /*control.hover(
         (e) => { this._activateControl(control) },
         (e) => {
           var currControl = this.modesMap[this.currentModeName].control;
@@ -21,7 +21,7 @@ export default class ModeSwitcher {
             this._deActivateControl(control);
           }
         }
-      );
+      );*/
 
       if(it["default"]) {
         it.control.click();
@@ -49,13 +49,13 @@ export default class ModeSwitcher {
   _activateControl($control) {
     if(!$control.hasClass('active')) {
       $control.addClass('active')
-        .animate({'width': ($control.find('span').width()+24) + 'px'});
+        //.animate({'width': ($control.find('span').width()+24) + 'px'});
     }
   }
 
   _deActivateControl($control) {
     if($control.hasClass('active')) {
-      $control.removeClass('active').animate({"width": "14px"});
+      $control.removeClass('active')//.animate({"width": "14px"});
     }
   }
 }
