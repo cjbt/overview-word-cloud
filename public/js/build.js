@@ -13421,14 +13421,6 @@ System.register("app/ModeSwitcher", [], function($__export) {
             control.click((function() {
               return $__0.switchTo(modeName);
             }));
-            control.hover((function(e) {
-              $__0._activateControl(control);
-            }), (function(e) {
-              var currControl = $__0.modesMap[$__0.currentModeName].control;
-              if (currControl.get(0) !== e.target && !currControl.find(e.target).length) {
-                $__0._deActivateControl(control);
-              }
-            }));
             if (it["default"]) {
               it.control.click();
             }
@@ -13450,12 +13442,12 @@ System.register("app/ModeSwitcher", [], function($__export) {
           },
           _activateControl: function($control) {
             if (!$control.hasClass('active')) {
-              $control.addClass('active').animate({'width': ($control.find('span').width() + 24) + 'px'});
+              $control.addClass('active');
             }
           },
           _deActivateControl: function($control) {
             if ($control.hasClass('active')) {
-              $control.removeClass('active').animate({"width": "14px"});
+              $control.removeClass('active');
             }
           }
         }, {});
