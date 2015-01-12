@@ -50,6 +50,7 @@ export default function(paramString, server) {
   $('[data-toggle="tooltip"]').tooltip();
   cloud.start(() => oboe('/generate?' + paramString))
 
+  //handle resizes
   var resizeTimer;
   $window.resize(function() {
     clearTimeout(resizeTimer);
