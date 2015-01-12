@@ -26,10 +26,10 @@ html(lang="en", class="no-js")
   body
     #chrome
       progress(max="1.0", value="0")
-      label#search-btn.btn.mode-btn(data-toggle="tooltip", data-placement="bottom" title="Click on a word to search for it in the document set while in this mode.")
+      label#search-btn.btn.mode-btn(data-toggle="tooltip", data-placement="bottom" title="Selection tool. Click on a word to search for it in the document set while using this tool.")
         input(id="search-mode", type="radio", name="mode", "value"="search", class="accessibility")
         span Search Mode
-      label#eraser-btn.btn.mode-btn(data-toggle="tooltip", data-placement="bottom" title="Click on a word to hide it from the word cloud while in this mode.")
+      label#eraser-btn.btn.mode-btn(data-toggle="tooltip", data-placement="bottom" title="Eraser tool. Click on a word to hide it from the word cloud while using this tool.")
         input(id="eraser-mode", type="radio", name="mode", "value"="eraser", class="accessibility")
         span Eraser Mode
 
