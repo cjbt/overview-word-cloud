@@ -71,7 +71,7 @@ class CloudLayout {
       , center = size.map((it) => it/2)
       , xAccessor = d => d.x, yAccessor = d => d.y
       , minValue, maxValue, nTokensToShow, tokensArray, tokenValues
-      , nodes, links, oldNodePositions;
+      , nodes, oldNodePositions;
 
     nTokensToShow = Math.ceil(150/(1+Math.pow(Math.E, (-1*size[0]*size[1]/85000 + 2.75)))*this.percentComplete);
     tokensArray = tokensToArray(tokens).slice(0, nTokensToShow);
@@ -114,46 +114,8 @@ class CloudLayout {
       return node;
     });
 
-    // Generate links--not for d3, but for our custom forces.
-    this.links = d3.geom.voronoi().x(xAccessor).y(yAccessor).links(nodes);
-    this.links.forEach((link) => {
-      //initialize the nodes
-      if(!link.source.linkIndices) {
-        link.source.linkIndices = [];
-        link.source.planarConstraints = [];
-      }
-
-      //initialize the nodes
-      if(!link.target.linkIndices) {
-        link.target.linkIndices = [];
-        link.target.planarConstraints = [];
-      }
-
-      link.source.linkIndices.push(link.target.index);
-      link.target.linkIndices.push(link.source.index);
-    }); 
-
-    // Store each node's opposite edge in the initial layout, so that we can
-    // add a force to push the nodes back to a planar layout if they start to 
-    // deviate. Below, we can't just use d3.geom.voronoi.triangles because it 
-    // doesn't return a full triangulation--yet alone the same one as .links--
-    // when multiple are possible.
-    nodes.forEach(node => {
-      // for each pair of nodes this node links to, see if 
-      // they link to each other, in which case we have a triangle.
-      for(var i = 0, len = (node.linkIndices || []).length; i < len; i++) {
-        for(var j = i+1; j < len; j++) {
-          let pair = [nodes[node.linkIndices[i]], nodes[node.linkIndices[j]]];
-          if(linked(pair[0], pair[1])) {
-            node.planarConstraints.push(pair);
-          }
-        }
-      }
-    });
-
     // initialize the layout with these nodes
-    this.layout
-      .nodes(nodes);
+    this.layout.nodes(nodes);
   }
 
   render(container, size, tokens, percentComplete) {
@@ -213,23 +175,6 @@ class CloudLayout {
     var text = this.containerGElm.selectAll('text')
       .data(nodes, this.nodeHelpers.text);
 
-    var links = this.containerGElm.selectAll('line')
-      .data(this.links.slice(0));
-
-    // Adjust existing links
-    links
-      .attr("x1", function(d) { return d.source.x; })
-      .attr("y1", function(d) { return d.source.y; })
-      .attr("x2", function(d) { return d.target.x; })
-      .attr("y2", function(d) { return d.target.y; });
-
-    // Add new links
-    links.enter().append('line')
-      .attr("x1", function(d) { return d.source.x; })
-      .attr("y1", function(d) { return d.source.y; })
-      .attr("x2", function(d) { return d.target.x; })
-      .attr("y2", function(d) { return d.target.y; });
-
     // Adjust existing words
     text
       .attr('transform', this.nodeHelpers.transform)
@@ -253,9 +198,6 @@ class CloudLayout {
 
     // Remove old words
     text.exit()
-      .each(function() { exitGroupNode.appendChild(this); });
-
-    links.exit()
       .each(function() { exitGroupNode.appendChild(this); });
 
     exitGroup.transition()
@@ -350,8 +292,7 @@ CloudLayout.prototype.nodeHelpers = {
           }
 
           // If the points don't overlap, pull them together.
-          // check for .linkIndices as occasionally we have a disconnected node.
-          else if(linked(currNode, d)) {
+          else {
             let nodeCenter = center(nodeOffsets);
             let currCenter = center(currOffsets);
             let nodeWidth  = (nodeOffsets.right - nodeOffsets.left)/2;
@@ -399,13 +340,6 @@ CloudLayout.prototype.nodeHelpers = {
     }; 
   }
 };
-
-function linked(nodeA, nodeB) {
-  return (
-    nodeA.linkIndices && nodeA.linkIndices.indexOf(nodeB.index) !== -1 ||
-    nodeB.linkIndices && nodeB.linkIndices.indexOf(nodeA.index) !== -1
-  );
-}
 
 function distanceFromCenterToNearestEdgeAtAngle(canvasWidth, canvasHeight, angle) {
   return Math.min(
