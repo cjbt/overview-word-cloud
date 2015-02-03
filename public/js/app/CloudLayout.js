@@ -99,7 +99,7 @@ class CloudLayout {
 
       // Otherwise, generate initial position for the node.
       else {
-        let angle = 2*Math.PI*((node.value % 360)/360) + (i/nTokensToShow)*.001;
+        let angle = 2*Math.PI*((hashString(node.text) % 360)/360);
 
         let distanceToEdgeAtAngle = 
           distanceFromCenterToNearestEdgeAtAngle(center[0], center[1], angle);
@@ -419,5 +419,16 @@ function tokensToArray(tokens) {
     .map((k) => ({text: k, value: tokens[k]}))
     .sort((o1, o2) => o2.value - o1.value);
 }
+
+function hashString(string) {
+  var hash = 0, i, chr, len;
+  if (string.length == 0) return hash;
+  for(i = 0, len = string.length; i < len; i++) {
+    chr   = string.charCodeAt(i);
+    hash  = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+};
 
 export default CloudLayout
