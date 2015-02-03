@@ -21,7 +21,7 @@ app.get('/generate', function(req, res, next) {
   //Check the store. If we don't have a saved result, generate + save one.
   storeStream.done(function(json) {
     if(!objIsEmpty(json)) {
-      res.end('[' + json + ']');
+      res.end('[' + JSON.stringify(json) + ']');
       console.log(
         '[req %d] sent the JSON for docset %d from the store - %d ms elapsed',
         requestId,
