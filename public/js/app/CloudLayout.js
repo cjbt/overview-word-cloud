@@ -333,7 +333,7 @@ CloudLayout.prototype.nodeHelpers = {
               'y': overlapY*(d === topNode ? -1 : 1)
             }
 
-            let shift = shifts[dimension]/2;
+            let shift = alpha*shifts[dimension]/2;
             
             d[dimension] += shift;
             currNode[dimension] -= shift;
@@ -379,9 +379,9 @@ CloudLayout.prototype.nodeHelpers = {
             let distanceToMove = 
               r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
 
-            let strength  = .5*Math.sqrt(d.value*currNode.value)/maxImportance;
-            let distanceX = distanceToMove*Math.cos(angle)*alpha*strength;
-            let distanceY = distanceToMove*Math.sin(angle)*alpha*strength;
+            let strength  = .4*Math.sqrt(d.value*currNode.value)/maxImportance;
+            let distanceX = distanceToMove*Math.cos(angle)*alpha*alpha*strength;
+            let distanceY = distanceToMove*Math.sin(angle)*alpha*alpha*strength;
 
             d.y -= distanceY;
             d.x += distanceX;

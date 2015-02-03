@@ -13811,7 +13811,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                     'x': overlapX * (d === leftNode ? -1 : 1),
                     'y': overlapY * (d === topNode ? -1 : 1)
                   };
-                  var shift = shifts[dimension] / 2;
+                  var shift = alpha * shifts[dimension] / 2;
                   d[dimension] += shift;
                   currNode[dimension] -= shift;
                   if (dimension == 'x') {
@@ -13834,9 +13834,9 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                   var nodeDistanceToNearestEdge = distanceFromCenterToNearestEdgeAtAngle(nodeWidth, nodeHeight, angle);
                   var currDistanceToNearestEdge = distanceFromCenterToNearestEdgeAtAngle(currWidth, currHeight, angle);
                   var distanceToMove = r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
-                  var strength = .5 * Math.sqrt(d.value * currNode.value) / maxImportance;
-                  var distanceX = distanceToMove * Math.cos(angle) * alpha * strength;
-                  var distanceY = distanceToMove * Math.sin(angle) * alpha * strength;
+                  var strength = .4 * Math.sqrt(d.value * currNode.value) / maxImportance;
+                  var distanceX = distanceToMove * Math.cos(angle) * alpha * alpha * strength;
+                  var distanceY = distanceToMove * Math.sin(angle) * alpha * alpha * strength;
                   d.y -= distanceY;
                   d.x += distanceX;
                   currNode.x -= distanceX;
