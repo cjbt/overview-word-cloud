@@ -13,68 +13,93 @@ var nextRequestId = 1;
 
 app.get('/generate', function(req, res, next) {
   var api = new API(req.query.server, req.query.apiToken)
-    , docStream = api.getAllDocuments(oboe, req.query.documentSetId, "random")
-    , counter = new DocSetTokenCounter()
-    , nDocumentsProcessed = 0, nDocumentsTotal
-    , firstSend = true, sendTimeoutId
-    , requestId = nextRequestId++, requestStartDate = new Date();
+    , requestId = nextRequestId++, requestStartDate = new Date()
+    , storeStream = api.getStoreState(oboe), docStream;
 
   res.header('Content-Type', 'application/json');
 
-  function sendSnapshot(lastSend) {
-    var vector   = tfdfArrayToTfMap(counter.getTopTokens(150))
-      , progress = nDocumentsTotal ? (nDocumentsProcessed / nDocumentsTotal) : 0
-      , json     = getResponseJson(vector, progress)
-      , before   = firstSend ? "[" : ",";
-
-    res.write(before + json);
-    firstSend = false;
-
-    if (lastSend) {
-      res.end("]");
+  //Check the store. If we don't have a saved result, generate + save one.
+  storeStream.done(function(json) {
+    if(!objIsEmpty(json)) {
+      res.end('[' + json + ']');
+      console.log(
+        '[req %d] sent the JSON for docset %d from the store - %d ms elapsed',
+        requestId,
+        req.query.documentSetId,
+        new Date() - requestStartDate
+      );
     }
 
-    console.log(
-      '[req %d] pushed %s JSON for docset %d - %d ms elapsed',
-      requestId,
-      lastSend ? 'last' : 'some',
-      req.query.documentSetId,
-      new Date() - requestStartDate
-    );
-  }
+    else {
+      var counter = new DocSetTokenCounter()
+        , nDocumentsProcessed = 0, nDocumentsTotal
+        , firstSend = true, sendTimeoutId;
+      
+      docStream = api.getAllDocuments(oboe, req.query.documentSetId, "random");
+      docStream
+        .node('pagination.total', function(total) {
+          nDocumentsTotal = total;
 
-  function sendSnapshotAndQueue() {
-    sendSnapshot(false);
-    sendTimeoutId = setTimeout(sendSnapshotAndQueue, SendInterval);
-  }
+          sendTimeoutId = setTimeout(sendSnapshotAndQueue, SendInterval);
+        })
+        .node('items.*', function(doc) {
+          nDocumentsProcessed += 1;
+          counter.processDocument(doc.text);
 
-  function end() {
-    clearTimeout(sendTimeoutId);
-    sendSnapshot(true);
-  }
+          return oboe.drop; //remove the doc from memory
+        })
+        .done(function () {
+          var lastJson = getSnapshotJson();
+          clearTimeout(sendTimeoutId);
+          sendSnapshot(true, lastJson);
+          api.setStoreState(oboe, lastJson);
+        });
+    }
+
+    function getSnapshotJson() {
+      var vector = tfdfArrayToTfMap(counter.getTopTokens(150))
+        , progress = nDocumentsTotal ? (nDocumentsProcessed / nDocumentsTotal) : 0;
+
+      return JSON.stringify({
+        "progress": progress,
+        "tokens": vector
+      });
+    }
+
+    function sendSnapshot(lastSend, json) {
+      res.write((firstSend ? "[" : ",") + json);
+      firstSend = false;
+
+      if (lastSend) {
+        res.end("]");
+      }
+
+      console.log(
+        '[req %d] pushed %s JSON for docset %d - %d ms elapsed',
+        requestId,
+        lastSend ? 'last' : 'some',
+        req.query.documentSetId,
+        new Date() - requestStartDate
+      );
+    }
+
+    function sendSnapshotAndQueue() {
+      sendSnapshot(false, getSnapshotJson());
+      sendTimeoutId = setTimeout(sendSnapshotAndQueue, SendInterval);
+    }
+  });
 
   function abort() {
     console.log('[req %d] abort', requestId);
-    docStream.abort(); // docStream will fire no more callbacks
+    storeStream.abort();
+    if(docStream && docStream.abort) {
+      docStream.abort(); // docStream will fire no more callbacks
+    }
     if (sendTimeoutId) { clearTimeout(sendTimeoutId); }
     res.end();
   }
 
   req.on('close', abort);
-
-  docStream
-    .node('pagination.total', function(total) {
-      nDocumentsTotal = total;
-
-      sendTimeoutId = setTimeout(sendSnapshotAndQueue, SendInterval);
-    })
-    .node('items.*', function(doc) {
-      nDocumentsProcessed += 1;
-      counter.processDocument(doc.text);
-
-      return oboe.drop; //remove the doc from memory
-    })
-    .done(end);
 });
 
 app.get('/show', function(req, res, next) {
@@ -98,9 +123,10 @@ function tfdfArrayToTfMap(tfdf) {
   return obj;
 }
 
-function getResponseJson(vector, progress) {
-  return JSON.stringify({
-    "progress": progress,
-    "tokens": vector
-  });
+function objIsEmpty(obj) {
+  var hasOwnProperty = Object.prototype.hasOwnProperty;
+  for (var key in obj) {
+    if (hasOwnProperty.call(obj, key)) return false;
+  }
+  return true;
 }

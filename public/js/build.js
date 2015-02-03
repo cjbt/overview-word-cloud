@@ -13553,6 +13553,20 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
       return o2.value - o1.value;
     }));
   }
+  function hashString(string) {
+    var hash = 0,
+        i,
+        chr,
+        len;
+    if (string.length == 0)
+      return hash;
+    for (i = 0, len = string.length; i < len; i++) {
+      chr = string.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0;
+    }
+    return hash;
+  }
   return {
     setters: [function(m) {
       WebFont = m.default;
@@ -13645,7 +13659,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
               if (oldNodePositions[node.text]) {
                 ($__2 = oldNodePositions[node.text], node.x = $__2[0], node.y = $__2[1], $__2);
               } else {
-                var angle = 2 * Math.PI * ((node.value % 360) / 360) + (i / nTokensToShow) * .001;
+                var angle = 2 * Math.PI * ((hashString(node.text) % 360) / 360);
                 var distanceToEdgeAtAngle = distanceFromCenterToNearestEdgeAtAngle(center[0], center[1], angle);
                 var r = distanceToEdgeAtAngle * (1 - $__0.toCenterScale(node.value));
                 ($__3 = cartesianToOffsets(polarToCartesian([r, angle]), center), node.x = $__3[0], node.y = $__3[1], $__3);
@@ -13837,6 +13851,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
           };
         }
       };
+      ;
       $__export('default', CloudLayout);
     }
   };
