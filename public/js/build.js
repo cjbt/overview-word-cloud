@@ -13591,6 +13591,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
           this.layout = d3.layout.force().friction(friction).gravity(0).charge(0).on('tick', this._tick.bind(this));
           this.percentComplete = 0;
           this.fontScale = d3.scale.linear().domain([1, Infinity]).range([10, 54]);
+          this.oldFontScale = d3.scale.linear().domain([1, Infinity]).range([10, 54]);
           this.toCenterScale = d3.scale.sqrt().domain([1, Infinity]).range([0, 1]);
           this.container = null;
           this.containerSvgElm = null;
@@ -13643,6 +13644,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
             }));
             maxValue = Math.max.apply(null, tokenValues);
             minValue = Math.min.apply(null, tokenValues);
+            this.oldFontScale.domain(this.fontScale.domain());
             this.fontScale.domain([minValue, maxValue]);
             this.toCenterScale.domain([minValue, maxValue]);
             oldNodePositions = this.layout.nodes().reduce((function(prev, d) {
@@ -13674,7 +13676,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
             this.setPercentComplete(percentComplete);
             this.setTokens(tokens);
             if (rebuildCollisionHandler) {
-              this._collisionFreeCompactor = this.nodeHelpers.collisionFreeCompactor(this.layout.nodes(), 10, this.fontScale, this.toCenterScale.domain()[1], size, this);
+              this._collisionFreeCompactor = this.nodeHelpers.collisionFreeCompactor(this.layout.nodes(), 10, this.toCenterScale.domain()[1], size, this);
             }
             this.layout.start();
           },
@@ -13682,23 +13684,26 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
             var $__0 = this;
             var size = this.layout.size(),
                 nodes = this.layout.nodes(),
-                visualSize = (function(d) {
-                  return $__0.nodeHelpers.visualSize(d, $__0.fontScale);
+                interpolatedScale = (function(d) {
+                  return (1 - 10 * event.alpha) * $__0.fontScale(d) + 10 * event.alpha * $__0.oldFontScale(d);
                 }),
+                visualSize = (function(d) {
+                  return $__0.nodeHelpers.visualSize(d, interpolatedScale);
+                }),
+                fontSizer = this.nodeHelpers.fontSize.bind(null, interpolatedScale),
                 buffer = 8;
             nodes.forEach((function(d, i) {
-              $__0._collisionFreeCompactor(d, event.alpha);
+              $__0._collisionFreeCompactor(d, event.alpha, interpolatedScale);
               var nodeSize = visualSize(d);
               var thisBufferX = buffer + nodeSize[0] / 2;
               var thisBufferY = buffer + nodeSize[1];
               d.x = Math.max(thisBufferX, Math.min(size[0] - thisBufferX, d.x));
               d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
             }));
-            this._draw(event.alpha);
+            this._draw(event.alpha, fontSizer);
           },
-          _draw: function(alpha) {
+          _draw: function(alpha, fontSizer) {
             var fontStack = "'Open Sans', Helvetica, Arial, sans-serif",
-                fontSizer = this.nodeHelpers.fontSize.bind(null, this.fontScale),
                 nodes = this.layout.nodes();
             var text = this.containerGElm.selectAll('text').data(nodes, this.nodeHelpers.text);
             text.attr('transform', this.nodeHelpers.transform).style('font-size', fontSizer).style('fill', this.nodeHelpers.color);
@@ -13726,12 +13731,12 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
           return fontScale(d.value) + 'px';
         },
         visualSize: function(d, fontScale) {
-          var leading = arguments[2] !== (void 0) ? arguments[2] : 1.44;
+          var leading = arguments[2] !== (void 0) ? arguments[2] : 1.4;
           return [d.text.length * fontScale(d.value) * .55, fontScale(d.value) * leading];
         },
-        collisionFreeCompactor: function(nodes, padding, fontScale, maxImportance, canvasSize, self) {
+        collisionFreeCompactor: function(nodes, padding, maxImportance, canvasSize, self) {
           var $__0 = this;
-          var offsets = (function(node) {
+          var offsets = (function(node, fontScale) {
             var size = $__0.visualSize(node, fontScale);
             return {
               left: node.x - size[0] / 2 - padding,
@@ -13743,14 +13748,14 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
           var center = (function(offsets) {
             return [offsets.left + (offsets.right - offsets.left) / 2, offsets.top + (offsets.bottom - offsets.top) / 2];
           });
-          return function(d, alpha) {
-            var nodeOffsets = offsets(d),
+          return function(d, alpha, fontScale) {
+            var nodeOffsets = offsets(d, fontScale),
                 i,
                 len;
             for (i = 0, len = nodes.length; i < len; i++) {
               var currNode = nodes[i];
               if (currNode !== d) {
-                var currOffsets = offsets(currNode);
+                var currOffsets = offsets(currNode, fontScale);
                 var topNode = nodeOffsets.top <= currOffsets.top ? d : currNode;
                 var leftNode = nodeOffsets.left <= currOffsets.left ? d : currNode;
                 var overlapY = (topNode === d ? nodeOffsets.bottom - currOffsets.top : currOffsets.bottom - nodeOffsets.top);
@@ -13761,7 +13766,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                     'x': overlapX * (d === leftNode ? -1 : 1),
                     'y': overlapY * (d === topNode ? -1 : 1)
                   };
-                  var shift = 1.25 * alpha * shifts[dimension] / 2;
+                  var shift = (1.2 * alpha) * shifts[dimension] / 2;
                   d[dimension] += shift;
                   currNode[dimension] -= shift;
                   if (dimension == 'x') {
@@ -13784,9 +13789,9 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                   var nodeDistanceToNearestEdge = distanceFromCenterToNearestEdgeAtAngle(nodeWidth, nodeHeight, angle);
                   var currDistanceToNearestEdge = distanceFromCenterToNearestEdgeAtAngle(currWidth, currHeight, angle);
                   var distanceToMove = r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
-                  var strength = .0033 * Math.sqrt(d.value * currNode.value) / maxImportance;
-                  var distanceX = distanceToMove * Math.cos(angle) * alpha * alpha * strength;
-                  var distanceY = distanceToMove * Math.sin(angle) * alpha * alpha * strength;
+                  var strength = .00048 * Math.sqrt(d.value * currNode.value) / maxImportance;
+                  var distanceX = distanceToMove * Math.cos(angle) * Math.pow(alpha, 1.2) * strength;
+                  var distanceY = distanceToMove * Math.sin(angle) * Math.pow(alpha, 1.2) * strength;
                   d.y -= distanceY;
                   d.x += distanceX;
                   currNode.x -= distanceX;

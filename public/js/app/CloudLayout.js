@@ -21,12 +21,17 @@ class CloudLayout {
     this.layout = d3.layout.force()
       .friction(friction)
       .gravity(0)
-      .charge(0)
+      .charge(0) //(d) => 30*d.value/this.fontScale.domain()[1]
       .on('tick', this._tick.bind(this))
 
     this.percentComplete = 0;
 
     this.fontScale = d3.scale.linear() 
+      .domain([1, Infinity])
+      .range([10, 54]);
+
+    //so we can interpolate font-size changes.
+    this.oldFontScale = d3.scale.linear()
       .domain([1, Infinity])
       .range([10, 54]);
 
@@ -80,6 +85,7 @@ class CloudLayout {
     tokenValues = tokensArray.map((d) => d.value);
     maxValue = Math.max.apply(null, tokenValues);
     minValue = Math.min.apply(null, tokenValues);
+    this.oldFontScale.domain(this.fontScale.domain());
     this.fontScale.domain([minValue, maxValue]);
     this.toCenterScale.domain([minValue, maxValue]);
 
@@ -136,7 +142,6 @@ class CloudLayout {
       this._collisionFreeCompactor = this.nodeHelpers.collisionFreeCompactor(
         this.layout.nodes(),
         10,
-        this.fontScale,
         this.toCenterScale.domain()[1],
         size,
         this
@@ -149,12 +154,14 @@ class CloudLayout {
   _tick(event) {
     var size = this.layout.size()
       , nodes = this.layout.nodes()
-      , visualSize = (d) => this.nodeHelpers.visualSize(d, this.fontScale)
+      , interpolatedScale = (d) => (1-10*event.alpha)*this.fontScale(d) + 10*event.alpha*this.oldFontScale(d)
+      , visualSize = (d) => this.nodeHelpers.visualSize(d, interpolatedScale)
+      , fontSizer = this.nodeHelpers.fontSize.bind(null, interpolatedScale)
       , buffer = 8;
 
     nodes.forEach((d, i) => {
       //prevent collisions
-      this._collisionFreeCompactor(d, event.alpha);
+      this._collisionFreeCompactor(d, event.alpha, interpolatedScale);
 
       //enforce a hard bounding so nothing escapes
       var nodeSize = visualSize(d);
@@ -164,12 +171,11 @@ class CloudLayout {
       d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
     });
 
-    this._draw(event.alpha);
+    this._draw(event.alpha, fontSizer);
   }
 
-  _draw(alpha) {
+  _draw(alpha, fontSizer) {
     var fontStack = "'Open Sans', Helvetica, Arial, sans-serif"
-      , fontSizer = this.nodeHelpers.fontSize.bind(null, this.fontScale)
       , nodes = this.layout.nodes();
 
     var text = this.containerGElm.selectAll('text')
@@ -212,11 +218,11 @@ CloudLayout.prototype.nodeHelpers = {
   text:       function(d)    { return d.text; },
   color:      function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; },
   fontSize:   function(fontScale, d) { return fontScale(d.value) + 'px'; },
-  visualSize: function(d, fontScale, leading = 1.44) { 
+  visualSize: function(d, fontScale, leading = 1.4) { 
     return [d.text.length*fontScale(d.value)*.55, fontScale(d.value)*leading];
   },
-  collisionFreeCompactor: function(nodes, padding, fontScale, maxImportance, canvasSize, self) {
-    var offsets = (node) => {
+  collisionFreeCompactor: function(nodes, padding, maxImportance, canvasSize, self) {
+    var offsets = (node, fontScale) => {
       var size = this.visualSize(node, fontScale);
       return {
         left: node.x - size[0]/2 - padding,
@@ -231,8 +237,8 @@ CloudLayout.prototype.nodeHelpers = {
       offsets.top + (offsets.bottom - offsets.top)/2
     ];
 
-    return function(d, alpha) {
-      var nodeOffsets = offsets(d), i, len;
+    return function(d, alpha, fontScale) {
+      var nodeOffsets = offsets(d, fontScale), i, len;
 
       // This loop starts at d.index, making the function (when it's used in a
       // loop over all nodes) take (n^2)/2 iterations instead of n^2. Using a
@@ -242,7 +248,7 @@ CloudLayout.prototype.nodeHelpers = {
       for(i = 0, len = nodes.length; i < len; i++) {
         let currNode = nodes[i];
         if(currNode !== d) {
-          let currOffsets = offsets(currNode);
+          let currOffsets = offsets(currNode, fontScale);
           let topNode  = nodeOffsets.top <= currOffsets.top ? d : currNode;
           let leftNode = nodeOffsets.left <= currOffsets.left ? d : currNode;
 
@@ -275,7 +281,7 @@ CloudLayout.prototype.nodeHelpers = {
               'y': overlapY*(d === topNode ? -1 : 1)
             }
 
-            let shift = 1.25*alpha*shifts[dimension]/2;
+            let shift = (1.2*alpha)*shifts[dimension]/2;
             
             d[dimension] += shift;
             currNode[dimension] -= shift;
@@ -320,9 +326,9 @@ CloudLayout.prototype.nodeHelpers = {
             let distanceToMove = 
               r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
 
-            let strength  = .0033*Math.sqrt(d.value*currNode.value)/maxImportance;
-            let distanceX = distanceToMove*Math.cos(angle)*alpha*alpha*strength;
-            let distanceY = distanceToMove*Math.sin(angle)*alpha*alpha*strength;
+            let strength  = .00048*Math.sqrt(d.value*currNode.value)/maxImportance;
+            let distanceX = distanceToMove*Math.cos(angle)*Math.pow(alpha, 1.2)*strength;
+            let distanceY = distanceToMove*Math.sin(angle)*Math.pow(alpha, 1.2)*strength;
 
             d.y -= distanceY;
             d.x += distanceX;
