@@ -1,13 +1,13 @@
 {
   "name": "overview-wordcloud",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "A Wordcloud plugin for Overview",
   "repository": {
     "type": "git",
-    "url": "https://github.com/overview/overview-wordcloud.git"
+    "url": "https://github.com/overview/overview-word-cloud.git"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "server.js"
   },
   "engines": {
     "node": ">=0.10.0"
