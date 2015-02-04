@@ -212,7 +212,7 @@ CloudLayout.prototype.nodeHelpers = {
   text:       function(d)    { return d.text; },
   color:      function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; },
   fontSize:   function(fontScale, d) { return fontScale(d.value) + 'px'; },
-  visualSize: function(d, fontScale, leading = 1.35) { 
+  visualSize: function(d, fontScale, leading = 1.44) { 
     return [d.text.length*fontScale(d.value)*.55, fontScale(d.value)*leading];
   },
   collisionFreeCompactor: function(nodes, padding, fontScale, maxImportance, canvasSize, self) {
@@ -275,7 +275,7 @@ CloudLayout.prototype.nodeHelpers = {
               'y': overlapY*(d === topNode ? -1 : 1)
             }
 
-            let shift = alpha*shifts[dimension]/2;
+            let shift = 1.25*alpha*shifts[dimension]/2;
             
             d[dimension] += shift;
             currNode[dimension] -= shift;
@@ -320,7 +320,7 @@ CloudLayout.prototype.nodeHelpers = {
             let distanceToMove = 
               r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
 
-            let strength  = .4*Math.sqrt(d.value*currNode.value)/maxImportance;
+            let strength  = .0033*Math.sqrt(d.value*currNode.value)/maxImportance;
             let distanceX = distanceToMove*Math.cos(angle)*alpha*alpha*strength;
             let distanceY = distanceToMove*Math.sin(angle)*alpha*alpha*strength;
 

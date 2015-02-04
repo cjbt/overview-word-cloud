@@ -13537,9 +13537,6 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
       distance,
       fontsDonePromise,
       CloudLayout;
-  function linked(nodeA, nodeB) {
-    return (nodeA.linkIndices && nodeA.linkIndices.indexOf(nodeB.index) !== -1 || nodeB.linkIndices && nodeB.linkIndices.indexOf(nodeA.index) !== -1);
-  }
   function distanceFromCenterToNearestEdgeAtAngle(canvasWidth, canvasHeight, angle) {
     return Math.min(Math.abs(canvasWidth / Math.cos(angle)), Math.abs(canvasHeight / Math.sin(angle)));
   }
@@ -13638,7 +13635,6 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                 tokensArray,
                 tokenValues,
                 nodes,
-                links,
                 oldNodePositions;
             nTokensToShow = Math.ceil(150 / (1 + Math.pow(Math.E, (-1 * size[0] * size[1] / 85000 + 2.75))) * this.percentComplete);
             tokensArray = tokensToArray(tokens).slice(0, nTokensToShow);
@@ -13666,30 +13662,6 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
               }
               node.index = i;
               return node;
-            }));
-            this.links = d3.geom.voronoi().x(xAccessor).y(yAccessor).links(nodes);
-            this.links.forEach((function(link) {
-              if (!link.source.linkIndices) {
-                link.source.linkIndices = [];
-                link.source.planarConstraints = [];
-              }
-              if (!link.target.linkIndices) {
-                link.target.linkIndices = [];
-                link.target.planarConstraints = [];
-              }
-              link.source.linkIndices.push(link.target.index);
-              link.target.linkIndices.push(link.source.index);
-            }));
-            nodes.forEach((function(node) {
-              for (var i = 0,
-                  len = (node.linkIndices || []).length; i < len; i++) {
-                for (var j = i + 1; j < len; j++) {
-                  var pair = [nodes[node.linkIndices[i]], nodes[node.linkIndices[j]]];
-                  if (linked(pair[0], pair[1])) {
-                    node.planarConstraints.push(pair);
-                  }
-                }
-              }
             }));
             this.layout.nodes(nodes);
           },
@@ -13729,33 +13701,11 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                 fontSizer = this.nodeHelpers.fontSize.bind(null, this.fontScale),
                 nodes = this.layout.nodes();
             var text = this.containerGElm.selectAll('text').data(nodes, this.nodeHelpers.text);
-            var links = this.containerGElm.selectAll('line').data(this.links.slice(0));
-            links.attr("x1", function(d) {
-              return d.source.x;
-            }).attr("y1", function(d) {
-              return d.source.y;
-            }).attr("x2", function(d) {
-              return d.target.x;
-            }).attr("y2", function(d) {
-              return d.target.y;
-            });
-            links.enter().append('line').attr("x1", function(d) {
-              return d.source.x;
-            }).attr("y1", function(d) {
-              return d.source.y;
-            }).attr("x2", function(d) {
-              return d.target.x;
-            }).attr("y2", function(d) {
-              return d.target.y;
-            });
             text.attr('transform', this.nodeHelpers.transform).style('font-size', fontSizer).style('fill', this.nodeHelpers.color);
             text.enter().append('text').attr('transform', this.nodeHelpers.transform).text(this.nodeHelpers.text).attr('text-anchor', 'middle').style('font-family', fontStack).style('font-size', fontSizer).style('fill', this.nodeHelpers.color).style('opacity', 1);
             var exitGroup = this.containerSvgElm.append('g').attr('transform', this.containerGElm.attr('transform'));
             var exitGroupNode = exitGroup.node();
             text.exit().each(function() {
-              exitGroupNode.appendChild(this);
-            });
-            links.exit().each(function() {
               exitGroupNode.appendChild(this);
             });
             exitGroup.transition().duration(500).style('opacity', 0).remove();
@@ -13776,7 +13726,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
           return fontScale(d.value) + 'px';
         },
         visualSize: function(d, fontScale) {
-          var leading = arguments[2] !== (void 0) ? arguments[2] : 1.35;
+          var leading = arguments[2] !== (void 0) ? arguments[2] : 1.44;
           return [d.text.length * fontScale(d.value) * .55, fontScale(d.value) * leading];
         },
         collisionFreeCompactor: function(nodes, padding, fontScale, maxImportance, canvasSize, self) {
@@ -13811,7 +13761,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                     'x': overlapX * (d === leftNode ? -1 : 1),
                     'y': overlapY * (d === topNode ? -1 : 1)
                   };
-                  var shift = alpha * shifts[dimension] / 2;
+                  var shift = 1.25 * alpha * shifts[dimension] / 2;
                   d[dimension] += shift;
                   currNode[dimension] -= shift;
                   if (dimension == 'x') {
@@ -13821,7 +13771,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                     nodeOffsets.top += shift;
                     nodeOffsets.bottom += shift;
                   }
-                } else if (linked(currNode, d)) {
+                } else {
                   var nodeCenter = center(nodeOffsets);
                   var currCenter = center(currOffsets);
                   var nodeWidth = (nodeOffsets.right - nodeOffsets.left) / 2;
@@ -13834,7 +13784,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                   var nodeDistanceToNearestEdge = distanceFromCenterToNearestEdgeAtAngle(nodeWidth, nodeHeight, angle);
                   var currDistanceToNearestEdge = distanceFromCenterToNearestEdgeAtAngle(currWidth, currHeight, angle);
                   var distanceToMove = r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
-                  var strength = .4 * Math.sqrt(d.value * currNode.value) / maxImportance;
+                  var strength = .0033 * Math.sqrt(d.value * currNode.value) / maxImportance;
                   var distanceX = distanceToMove * Math.cos(angle) * alpha * alpha * strength;
                   var distanceY = distanceToMove * Math.sin(angle) * alpha * alpha * strength;
                   d.y -= distanceY;
