@@ -14,7 +14,7 @@
       "ref": "origin/master",
       "repo": "https://github.com/overview/overview-word-cloud.git",
       "path": "/opt/pm2/overview-word-cloud",
-      "post-deploy" : "pm2 startOrRestart ecosystem.json --env production"
+      "post-deploy" : "npm install && pm2 startOrRestart ecosystem.json --env production"
     }
   }
 }
