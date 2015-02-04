@@ -13630,23 +13630,44 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                 yAccessor = (function(d) {
                   return d.y;
                 }),
-                minValue,
-                maxValue,
-                nTokensToShow,
-                tokensArray,
-                tokenValues,
                 nodes,
                 oldNodePositions;
-            nTokensToShow = Math.ceil(150 / (1 + Math.pow(Math.E, (-1 * size[0] * size[1] / 85000 + 2.75))) * this.percentComplete);
-            tokensArray = tokensToArray(tokens).slice(0, nTokensToShow);
-            tokenValues = tokensArray.map((function(d) {
-              return d.value;
-            }));
-            maxValue = Math.max.apply(null, tokenValues);
-            minValue = Math.min.apply(null, tokenValues);
+            var tokensArray = tokensToArray(tokens),
+                tokensArrayLen = tokensArray.length,
+                minValue = Infinity,
+                maxValue = 0,
+                nTokensToShow = 0,
+                tokenArea = 0,
+                goalArea = .48 * size[0] * size[1];
+            var getTokenArea = (function(token) {
+              var tokenSize = $__0.nodeHelpers.visualSize(token, $__0.fontScale);
+              return tokenSize[0] * tokenSize[1];
+            });
             this.oldFontScale.domain(this.fontScale.domain());
-            this.fontScale.domain([minValue, maxValue]);
-            this.toCenterScale.domain([minValue, maxValue]);
+            while (tokenArea < goalArea && nTokensToShow < tokensArrayLen) {
+              var potentialToken = tokensArray[nTokensToShow];
+              var doScalesUpdate = false;
+              if (potentialToken.value > maxValue) {
+                maxValue = potentialToken.value;
+                doScalesUpdate = true;
+              }
+              if (potentialToken.value < minValue) {
+                minValue = potentialToken.value;
+                doScalesUpdate = true;
+              }
+              if (doScalesUpdate) {
+                this.fontScale.domain([minValue, maxValue]);
+                this.toCenterScale.domain([minValue, maxValue]);
+                tokenArea = 0;
+                for (var i = 0; i < nTokensToShow; i++) {
+                  tokenArea += getTokenArea(tokensArray[i]);
+                }
+              } else {
+                nTokensToShow += 1;
+                tokenArea += getTokenArea(potentialToken);
+              }
+            }
+            tokensArray = tokensArray.slice(0, Math.ceil(nTokensToShow * this.percentComplete));
             oldNodePositions = this.layout.nodes().reduce((function(prev, d) {
               prev[d.text] = [d.x, d.y];
               return prev;
@@ -13766,7 +13787,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                     'x': overlapX * (d === leftNode ? -1 : 1),
                     'y': overlapY * (d === topNode ? -1 : 1)
                   };
-                  var shift = (1.2 * alpha) * shifts[dimension] / 2;
+                  var shift = (1.4 * alpha) * shifts[dimension] / 2;
                   d[dimension] += shift;
                   currNode[dimension] -= shift;
                   if (dimension == 'x') {
@@ -13789,9 +13810,9 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                   var nodeDistanceToNearestEdge = distanceFromCenterToNearestEdgeAtAngle(nodeWidth, nodeHeight, angle);
                   var currDistanceToNearestEdge = distanceFromCenterToNearestEdgeAtAngle(currWidth, currHeight, angle);
                   var distanceToMove = r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
-                  var strength = .00048 * Math.sqrt(d.value * currNode.value) / maxImportance;
-                  var distanceX = distanceToMove * Math.cos(angle) * Math.pow(alpha, 1.2) * strength;
-                  var distanceY = distanceToMove * Math.sin(angle) * Math.pow(alpha, 1.2) * strength;
+                  var strength = .00038 * Math.sqrt(d.value * currNode.value) / maxImportance;
+                  var distanceX = distanceToMove * Math.cos(angle) * Math.pow(alpha, 1.4) * strength;
+                  var distanceY = distanceToMove * Math.sin(angle) * Math.pow(alpha, 1.4) * strength;
                   d.y -= distanceY;
                   d.x += distanceX;
                   currNode.x -= distanceX;

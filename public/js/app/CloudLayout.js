@@ -75,19 +75,52 @@ class CloudLayout {
     var size = this.layout.size()
       , center = size.map((it) => it/2)
       , xAccessor = d => d.x, yAccessor = d => d.y
-      , minValue, maxValue, nTokensToShow, tokensArray, tokenValues
       , nodes, oldNodePositions;
 
-    nTokensToShow = Math.ceil(150/(1+Math.pow(Math.E, (-1*size[0]*size[1]/85000 + 2.75)))*this.percentComplete);
-    tokensArray = tokensToArray(tokens).slice(0, nTokensToShow);
+    var tokensArray = tokensToArray(tokens)
+      , tokensArrayLen = tokensArray.length
+      , minValue = Infinity, maxValue = 0, nTokensToShow = 0
+      , tokenArea = 0, goalArea = .48*size[0]*size[1];
 
-    // update the scales that depend on the max value
-    tokenValues = tokensArray.map((d) => d.value);
-    maxValue = Math.max.apply(null, tokenValues);
-    minValue = Math.min.apply(null, tokenValues);
+    var getTokenArea = (token) => {
+      var tokenSize = this.nodeHelpers.visualSize(token, this.fontScale);
+      return tokenSize[0]*tokenSize[1];
+    }
+
+    //put the current scale's values into oldFontScale
     this.oldFontScale.domain(this.fontScale.domain());
-    this.fontScale.domain([minValue, maxValue]);
-    this.toCenterScale.domain([minValue, maxValue]);
+
+    //figure out how many tokens to include now, and the new scale.
+    //old: Math.ceil(150/(1+Math.pow(Math.E, (-1*/85000 + 2.75)))*this.percentComplete);
+    while(tokenArea < goalArea && nTokensToShow < tokensArrayLen) {
+      //if we're going to include this token, see how it'd effect the area.
+      let potentialToken = tokensArray[nTokensToShow];
+      let doScalesUpdate = false;
+      if(potentialToken.value > maxValue) {
+        maxValue = potentialToken.value;
+        doScalesUpdate = true;
+      }
+
+      if(potentialToken.value < minValue) {
+        minValue = potentialToken.value;
+        doScalesUpdate = true;
+      }
+
+      if(doScalesUpdate) {
+        this.fontScale.domain([minValue, maxValue]);
+        this.toCenterScale.domain([minValue, maxValue]);
+        tokenArea = 0;
+        for(var i = 0; i < nTokensToShow; i++) {
+          tokenArea += getTokenArea(tokensArray[i]);
+        }
+      }
+      else {
+        nTokensToShow += 1; 
+        tokenArea += getTokenArea(potentialToken);
+      }
+    }
+    tokensArray = tokensArray.slice(0, Math.ceil(nTokensToShow*this.percentComplete));
+
 
     // Save the [x, y] of the existing nodes into an object, 
     // so we can keep their if they're still in the cloud.
@@ -281,7 +314,7 @@ CloudLayout.prototype.nodeHelpers = {
               'y': overlapY*(d === topNode ? -1 : 1)
             }
 
-            let shift = (1.2*alpha)*shifts[dimension]/2;
+            let shift = (1.4*alpha)*shifts[dimension]/2;
             
             d[dimension] += shift;
             currNode[dimension] -= shift;
@@ -326,9 +359,9 @@ CloudLayout.prototype.nodeHelpers = {
             let distanceToMove = 
               r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
 
-            let strength  = .00048*Math.sqrt(d.value*currNode.value)/maxImportance;
-            let distanceX = distanceToMove*Math.cos(angle)*Math.pow(alpha, 1.2)*strength;
-            let distanceY = distanceToMove*Math.sin(angle)*Math.pow(alpha, 1.2)*strength;
+            let strength  = .00038*Math.sqrt(d.value*currNode.value)/maxImportance;
+            let distanceX = distanceToMove*Math.cos(angle)*Math.pow(alpha, 1.4)*strength;
+            let distanceY = distanceToMove*Math.sin(angle)*Math.pow(alpha, 1.4)*strength;
 
             d.y -= distanceY;
             d.x += distanceX;
