@@ -21,7 +21,7 @@ class CloudLayout {
     this.layout = d3.layout.force()
       .friction(friction)
       .gravity(0)
-      .charge(0) //(d) => 30*d.value/this.fontScale.domain()[1]
+      .charge(0)
       .on('tick', this._tick.bind(this))
 
     this.percentComplete = 0;
@@ -65,10 +65,6 @@ class CloudLayout {
 
   setPercentComplete(percentComplete) {
     this.percentComplete = percentComplete;
-    this.containerSvgElm
-      //.style('transform', 'scale('+ percentComplete + ')')
-      //.style('filter', 'grayscale('+ (1 - percentComplete) + ')')
-      //.style('-webkit-filter', 'grayscale('+ (1 - percentComplete) + ')');
   }
 
   setTokens(tokens) {
@@ -91,11 +87,10 @@ class CloudLayout {
     this.oldFontScale.domain(this.fontScale.domain());
 
     //figure out how many tokens to include now, and the new scale.
-    //old: Math.ceil(150/(1+Math.pow(Math.E, (-1*/85000 + 2.75)))*this.percentComplete);
     while(tokenArea < goalArea && nTokensToShow < tokensArrayLen) {
-      //if we're going to include this token, see how it'd effect the area.
       let potentialToken = tokensArray[nTokensToShow];
       let doScalesUpdate = false;
+
       if(potentialToken.value > maxValue) {
         maxValue = potentialToken.value;
         doScalesUpdate = true;
@@ -109,6 +104,7 @@ class CloudLayout {
       if(doScalesUpdate) {
         this.fontScale.domain([minValue, maxValue]);
         this.toCenterScale.domain([minValue, maxValue]);
+        //recalculate tokenArea at new scales.
         tokenArea = 0;
         for(var i = 0; i < nTokensToShow; i++) {
           tokenArea += getTokenArea(tokensArray[i]);
@@ -121,9 +117,8 @@ class CloudLayout {
     }
     tokensArray = tokensArray.slice(0, Math.ceil(nTokensToShow*this.percentComplete));
 
-
     // Save the [x, y] of the existing nodes into an object, 
-    // so we can keep their if they're still in the cloud.
+    // so we can keep their positions if they're still in the cloud.
     oldNodePositions = this.layout.nodes().reduce((prev, d) => { 
       prev[d.text] = [d.x, d.y]; 
       return prev; 
@@ -170,7 +165,7 @@ class CloudLayout {
     this.setPercentComplete(percentComplete);
     this.setTokens(tokens);
 
-    //must do this after setTokens.
+    //must do this after setTokens, as that updates toCenterScale.
     if(rebuildCollisionHandler) {
       this._collisionFreeCompactor = this.nodeHelpers.collisionFreeCompactor(
         this.layout.nodes(),
@@ -187,29 +182,29 @@ class CloudLayout {
   _tick(event) {
     var size = this.layout.size()
       , nodes = this.layout.nodes()
-      , interpolatedScale = (d) => (1-10*event.alpha)*this.fontScale(d) + 10*event.alpha*this.oldFontScale(d)
-      , visualSize = (d) => this.nodeHelpers.visualSize(d, interpolatedScale)
-      , fontSizer = this.nodeHelpers.fontSize.bind(null, interpolatedScale)
+      , alpha = event.alpha
+      , interpolatedScale = (d) => (1-10*alpha)*this.fontScale(d) + 10*alpha*this.oldFontScale(d)
       , buffer = 8;
 
     nodes.forEach((d, i) => {
       //prevent collisions
-      this._collisionFreeCompactor(d, event.alpha, interpolatedScale);
+      this._collisionFreeCompactor(d, alpha, interpolatedScale);
 
       //enforce a hard bounding so nothing escapes
-      var nodeSize = visualSize(d);
+      var nodeSize = this.nodeHelpers.visualSize(d, interpolatedScale);
       var thisBufferX = buffer + nodeSize[0]/2;
       var thisBufferY = buffer + nodeSize[1];
       d.x = Math.max(thisBufferX, Math.min(size[0] - thisBufferX, d.x));
       d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
     });
 
-    this._draw(event.alpha, fontSizer);
+    this._draw(alpha, interpolatedScale);
   }
 
-  _draw(alpha, fontSizer) {
+  _draw(alpha, interpolatedScale) {
     var fontStack = "'Open Sans', Helvetica, Arial, sans-serif"
-      , nodes = this.layout.nodes();
+      , nodes = this.layout.nodes()
+      , fontSizer = this.nodeHelpers.fontSize.bind(null, interpolatedScale);
 
     var text = this.containerGElm.selectAll('text')
       .data(nodes, this.nodeHelpers.text);
@@ -273,11 +268,10 @@ CloudLayout.prototype.nodeHelpers = {
     return function(d, alpha, fontScale) {
       var nodeOffsets = offsets(d, fontScale), i, len;
 
-      // This loop starts at d.index, making the function (when it's used in a
-      // loop over all nodes) take (n^2)/2 iterations instead of n^2. Using a
-      // quadtree would be O(nlog(n)), but it doesn't work well, (without more
+      // This function (when it's used in a loop over all nodes) O(n^2).
+      // A quadtree would be O(nlog(n)), but it doesn't work well (without more
       // sophistication, anyway) because the node's position as a point bears
-      // so little relation to its real position as a rectangle on screen.
+      // little relation to its real position as a rectangle on screen.
       for(i = 0, len = nodes.length; i < len; i++) {
         let currNode = nodes[i];
         if(currNode !== d) {
@@ -314,6 +308,9 @@ CloudLayout.prototype.nodeHelpers = {
               'y': overlapY*(d === topNode ? -1 : 1)
             }
 
+            //1.4 here is a "magic value", balancing the strength of the 
+            //repulsion, to make sure collisions actually end up being avoided,
+            //with the need to not introduce new collisions with our adjustment.
             let shift = (1.4*alpha)*shifts[dimension]/2;
             
             d[dimension] += shift;
@@ -359,6 +356,11 @@ CloudLayout.prototype.nodeHelpers = {
             let distanceToMove = 
               r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
 
+            //.00038 here is a magic value balancing compactness against 
+            //introducing more collisions, as is 1.4 below. Making the shifts 
+            //proportional to alpha^1.4 instead of just alpha means that the
+            //collision avoidance shifts (which are proportional just to alpha)
+            //becomes more dominant in the later iterations.
             let strength  = .00038*Math.sqrt(d.value*currNode.value)/maxImportance;
             let distanceX = distanceToMove*Math.cos(angle)*Math.pow(alpha, 1.4)*strength;
             let distanceY = distanceToMove*Math.sin(angle)*Math.pow(alpha, 1.4)*strength;

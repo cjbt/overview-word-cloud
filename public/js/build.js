@@ -13613,7 +13613,6 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
           },
           setPercentComplete: function(percentComplete) {
             this.percentComplete = percentComplete;
-            this.containerSvgElm;
           },
           setTokens: function(tokens) {
             var $__0 = this;
@@ -13702,27 +13701,25 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
             var $__0 = this;
             var size = this.layout.size(),
                 nodes = this.layout.nodes(),
+                alpha = event.alpha,
                 interpolatedScale = (function(d) {
-                  return (1 - 10 * event.alpha) * $__0.fontScale(d) + 10 * event.alpha * $__0.oldFontScale(d);
+                  return (1 - 10 * alpha) * $__0.fontScale(d) + 10 * alpha * $__0.oldFontScale(d);
                 }),
-                visualSize = (function(d) {
-                  return $__0.nodeHelpers.visualSize(d, interpolatedScale);
-                }),
-                fontSizer = this.nodeHelpers.fontSize.bind(null, interpolatedScale),
                 buffer = 8;
             nodes.forEach((function(d, i) {
-              $__0._collisionFreeCompactor(d, event.alpha, interpolatedScale);
-              var nodeSize = visualSize(d);
+              $__0._collisionFreeCompactor(d, alpha, interpolatedScale);
+              var nodeSize = $__0.nodeHelpers.visualSize(d, interpolatedScale);
               var thisBufferX = buffer + nodeSize[0] / 2;
               var thisBufferY = buffer + nodeSize[1];
               d.x = Math.max(thisBufferX, Math.min(size[0] - thisBufferX, d.x));
               d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
             }));
-            this._draw(event.alpha, fontSizer);
+            this._draw(alpha, interpolatedScale);
           },
-          _draw: function(alpha, fontSizer) {
+          _draw: function(alpha, interpolatedScale) {
             var fontStack = "'Open Sans', Helvetica, Arial, sans-serif",
-                nodes = this.layout.nodes();
+                nodes = this.layout.nodes(),
+                fontSizer = this.nodeHelpers.fontSize.bind(null, interpolatedScale);
             var text = this.containerGElm.selectAll('text').data(nodes, this.nodeHelpers.text);
             text.attr('transform', this.nodeHelpers.transform).style('font-size', fontSizer).style('fill', this.nodeHelpers.color);
             text.enter().append('text').attr('transform', this.nodeHelpers.transform).text(this.nodeHelpers.text).attr('text-anchor', 'middle').style('font-family', fontStack).style('font-size', fontSizer).style('fill', this.nodeHelpers.color).style('opacity', 1);
