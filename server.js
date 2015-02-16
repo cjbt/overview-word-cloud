@@ -16,7 +16,8 @@ var nextRequestId = 1;
 app.get('/generate', function(req, res, next) {
   var api = new API(req.query.server, req.query.apiToken)
     , requestId = nextRequestId++, requestStartDate = new Date()
-    , storeStream = api.getStoreState(oboe), docStream;
+    , storeStream = api.getStoreState(oboe), docStream
+    , sendTimeoutId;
 
   res.header('Content-Type', 'application/json');
 
@@ -35,7 +36,7 @@ app.get('/generate', function(req, res, next) {
     else {
       var counter = new DocSetTokenCounter()
         , nDocumentsProcessed = 0, nDocumentsTotal
-        , firstSend = true, sendTimeoutId;
+        , firstSend = true;
       
       docStream = api.getAllDocuments(oboe, req.query.documentSetId, "random");
       docStream
