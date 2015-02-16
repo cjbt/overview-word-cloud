@@ -10,7 +10,7 @@
   "deploy": {
     "production": {
       "user": "pm2",
-      "host": "ec2-52-0-23-42.compute-1.amazonaws.com",
+      "host": "wordcloud.plugin.overviewproject.org",
       "ref": "origin/master",
       "repo": "https://github.com/overview/overview-word-cloud.git",
       "path": "/opt/pm2/overview-word-cloud",

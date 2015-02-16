@@ -1,6 +1,6 @@
 {
   "name": "overview-wordcloud",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "A Wordcloud plugin for Overview",
   "repository": {
     "type": "git",
@@ -18,9 +18,9 @@
     "morgan": "^1.5.0",
     "oboe": "^2.0.2"
   },
-  "subdomain": "overview-wordcloud",
   "devDependencies": {
     "gulp": "^3.8.10",
+    "pm2": "^0.12.5",
     "systemjs-builder": "^0.4.1"
   }
 }
