@@ -16,6 +16,8 @@
 # * HTTP from anywhere
 #
 # Choose your own keypair. (Each plugin will have its own keys.)
+#
+# Then scp this script in and run it!
 
 sudo apt-get install nodejs-legacy npm git haproxy
 sudo useradd -d /opt/pm2 -s /bin/bash -mrU pm2
