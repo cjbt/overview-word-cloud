@@ -17,7 +17,7 @@ export default class SearchMode {
     if(e.target.tagName.toLowerCase() !== 'text') {  
       window.parent.postMessage({
         call: 'setDocumentListParams',
-        args: [{name: 'in document set'}]
+        args: [{}]
       }, server);
 
       this.$container
@@ -30,7 +30,7 @@ export default class SearchMode {
       var term = e.target.textContent;
       window.parent.postMessage({
         call: 'setDocumentListParams',
-        args: [{q: term, name: 'with the word ' +  term}]
+        args: [{q: term}]
       }, server);
 
       //manage classes. can't use $target.addClass()

@@ -13309,17 +13309,14 @@ System.register("app/SearchMode", [], function($__export) {
             if (e.target.tagName.toLowerCase() !== 'text') {
               window.parent.postMessage({
                 call: 'setDocumentListParams',
-                args: [{name: 'in document set'}]
+                args: [{}]
               }, server);
               this.$container.removeClass('with-selection').find('.active').attr('class', '');
             } else {
               var term = e.target.textContent;
               window.parent.postMessage({
                 call: 'setDocumentListParams',
-                args: [{
-                  q: term,
-                  name: 'with the word ' + term
-                }]
+                args: [{q: term}]
               }, server);
               this.$container.find('.active').removeAttr('class');
               $(e.target).attr('class', 'active');
