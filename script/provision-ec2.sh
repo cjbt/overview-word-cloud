@@ -19,9 +19,10 @@
 #
 # Then scp this script in and run it!
 
-sudo apt-get install nodejs-legacy npm git haproxy
+sudo apt-get update -q
+sudo apt-get -q -yy install nodejs-legacy npm git haproxy
 sudo useradd -d /opt/pm2 -s /bin/bash -mrU pm2
-sudo mkdir /opt/pm2/.ssh
+sudo mkdir -p /opt/pm2/.ssh
 sudo cp ~/.ssh/authorized_keys /opt/pm2/.ssh/
 sudo chown pm2:pm2 /opt/pm2 -R
 
@@ -74,6 +75,11 @@ frontend https-frontend
   bind *:443 ssl crt /etc/haproxy/ssl-cert.pem
   default_backend plugin-backend
 EOT
+
+cat <<EOT | sudo tee /etc/default/haproxy
+ENABLED=1
+EOT
+sudo /etc/init.d/haproxy start
 
 # Then, on the server:
 #
