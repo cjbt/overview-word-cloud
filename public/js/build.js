@@ -13357,20 +13357,19 @@ System.register("app/EraserMode", [], function($__export) {
             this.$hiddenWordsButton.hide();
             this.$hiddenCounter.hide();
           },
-          handleInclusionChange: function(included, excluded) {
-            for (var key in excluded) {
-              this.$hiddenWordsDiv.addClass('hasHidden');
-              return;
-            }
-            this.$hiddenWordsDiv.removeClass('hasHidden');
+          handleInclusionChange: function(included, excluded, excludedArr) {
+            var excludedListHTML = excludedArr.reduce(function(prev, word) {
+              return '<li>' + word + '</li>' + prev;
+            }, "");
+            this.$hiddenWordsDiv[excludedArr.length ? "addClass" : "removeClass"]('hasHidden');
+            this.$hiddenCounter.html(excludedArr.length);
+            this.$hiddenWordsDiv.find('ul').html(excludedListHTML);
           },
           handleClick: function(e, server, $container) {
             if (e.target === this.$hiddenWordsButton.get(0)) {
               this.$hiddenWordsDiv.toggle();
             } else if (e.target.tagName.toLowerCase() == 'li' && this.$hiddenWordsDiv.find(e.target).length) {
               this.cloud.includeWord(e.target.textContent);
-              $(e.target).remove();
-              this.$hiddenCounter.html(parseInt(this.$hiddenCounter.html(), 10) - 1);
             } else if (e.target.tagName.toLowerCase() !== 'text') {
               this.$hiddenWordsDiv.hide();
             } else {
@@ -13382,8 +13381,6 @@ System.register("app/EraserMode", [], function($__export) {
                 'height': '0px',
                 'width': '0px'
               }, 500);
-              this.$hiddenWordsDiv.find('ul').prepend('<li>' + text + '</li>');
-              this.$hiddenCounter.html(parseInt(this.$hiddenCounter.html(), 10) + 1);
               this.cloud.excludeWord(text);
             }
           },
@@ -13471,6 +13468,7 @@ System.register("app/OverviewWordCloud", ["./utils"], function($__export) {
           this.progress = 0;
           this.words = {};
           this.excluded = {};
+          this.excludedKeysOrdered = [];
         };
         return ($traceurRuntime.createClass)(OverviewWordCloud, {
           start: function(DataStreamer) {
@@ -13492,25 +13490,36 @@ System.register("app/OverviewWordCloud", ["./utils"], function($__export) {
             }
           },
           setExcludedWords: function(exclude) {
+            var $__0 = this;
             for (var key in this.excluded) {
               this.words[key] = this.excluded[key];
             }
             this.excluded = {};
-            exclude.forEach(this.excludeWord.bind(this));
+            this.excludedKeysOrdered = [];
+            exclude.forEach((function(word) {
+              $__0.excludeWord(word, false);
+            }));
+            this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
           },
-          includeWord: function(word) {
+          includeWord: function(word, fireEvent) {
             if (this.excluded.hasOwnProperty(word)) {
               this.words[word] = this.excluded[word];
               delete this.excluded[word];
+              this.excludedKeysOrdered.splice(this.excludedKeysOrdered.indexOf(word), 1);
             }
-            this._dispatch("inclusionchange", [this.words, this.excluded]);
+            if (fireEvent !== false) {
+              this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
+            }
           },
-          excludeWord: function(word) {
+          excludeWord: function(word, fireEvent) {
             if (this.words.hasOwnProperty(word)) {
               this.excluded[word] = this.words[word];
               delete this.words[word];
+              this.excludedKeysOrdered.push(word);
             }
-            this._dispatch("inclusionchange", [this.words, this.excluded]);
+            if (fireEvent !== false) {
+              this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
+            }
           }
         }, {});
       }());
@@ -13883,12 +13892,21 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
           render();
         });
         cloud.observe("done", function() {
+          oboe('/hidden-tokens?' + paramString).done((function(it) {
+            cloud.setExcludedWords(it["hidden-tokens"]);
+          }));
           $progress.remove();
           render();
         });
-        cloud.observe("inclusionchange", function(included, excluded) {
+        cloud.observe("inclusionchange", function(included, excluded, excludedArr) {
+          var eraserMode = modeSwitcher.modesMap["eraser-mode"].mode;
           render();
-          modeSwitcher.currentMode.handleInclusionChange(included, excluded);
+          oboe({
+            "url": "/hidden-tokens?" + paramString,
+            "method": "PUT",
+            "body": {"hidden-tokens": excludedArr}
+          });
+          eraserMode.handleInclusionChange(included, excluded, excludedArr);
         });
         $html.click((function(e) {
           modeSwitcher.currentMode.handleClick(e, server);
