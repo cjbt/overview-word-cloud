@@ -32,25 +32,30 @@ class OverviewWordCloud {
     }
 
     this.excluded = {};
-    exclude.forEach(this.excludeWord.bind(this));
+    exclude.forEach((word) => {
+      this.excludeWord(word, false)
+    });
+    this._dispatch("inclusionchange", [this.words, this.excluded]);
   }
 
-  includeWord(word) {
+  includeWord(word, fireEvent) {
     if(this.excluded.hasOwnProperty(word)) {
       this.words[word] = this.excluded[word];
       delete this.excluded[word];      
     }
-
-    this._dispatch("inclusionchange", [this.words, this.excluded]);
+    if(fireEvent !== false) {
+      this._dispatch("inclusionchange", [this.words, this.excluded]);
+    }
   }
 
-  excludeWord(word) {
+  excludeWord(word, fireEvent) {
     if(this.words.hasOwnProperty(word)) {
       this.excluded[word] = this.words[word];
       delete this.words[word];
     }
-
-    this._dispatch("inclusionchange", [this.words, this.excluded]);
+    if(fireEvent !== false) {
+      this._dispatch("inclusionchange", [this.words, this.excluded]);
+    }
   }
 }
 
