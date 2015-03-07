@@ -42,15 +42,15 @@ export default function(paramString, server) {
     render();
   });
 
-  cloud.observe("inclusionchange", function(included, excluded) {
+  cloud.observe("inclusionchange", function(included, excluded, excludedArr) {
     var eraserMode = modeSwitcher.modesMap["eraser-mode"].mode;
     render();
     oboe({
       "url": "/hidden-tokens?" + paramString, 
       "method": "PUT", 
-      "body": {"hidden-tokens": Object.keys(excluded)} 
+      "body": {"hidden-tokens": excludedArr} 
     });
-    eraserMode.handleInclusionChange(included, excluded);
+    eraserMode.handleInclusionChange(included, excluded, excludedArr);
   });
 
   $html.click((e) => { 

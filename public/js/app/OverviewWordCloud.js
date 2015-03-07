@@ -5,6 +5,7 @@ class OverviewWordCloud {
     this.progress = 0;
     this.words = {};
     this.excluded = {};
+    this.excludedKeysOrdered = []
   }
 
   start(DataStreamer) {
@@ -32,19 +33,20 @@ class OverviewWordCloud {
     }
 
     this.excluded = {};
-    exclude.forEach((word) => {
-      this.excludeWord(word, false)
-    });
-    this._dispatch("inclusionchange", [this.words, this.excluded]);
+    this.excludedKeysOrdered = [];
+    exclude.forEach((word) => { this.excludeWord(word, false) });
+
+    this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
   }
 
   includeWord(word, fireEvent) {
     if(this.excluded.hasOwnProperty(word)) {
       this.words[word] = this.excluded[word];
-      delete this.excluded[word];      
+      delete this.excluded[word];
+      this.excludedKeysOrdered.splice(this.excludedKeysOrdered.indexOf(word), 1);
     }
     if(fireEvent !== false) {
-      this._dispatch("inclusionchange", [this.words, this.excluded]);
+      this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
     }
   }
 
@@ -52,9 +54,10 @@ class OverviewWordCloud {
     if(this.words.hasOwnProperty(word)) {
       this.excluded[word] = this.words[word];
       delete this.words[word];
+      this.excludedKeysOrdered.push(word);
     }
     if(fireEvent !== false) {
-      this._dispatch("inclusionchange", [this.words, this.excluded]);
+      this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
     }
   }
 }
