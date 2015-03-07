@@ -33,13 +33,24 @@ export default function(paramString, server) {
   });
 
   cloud.observe("done", function() {
+    // hide words from before. do this on done because the system
+    // will get confused if we try to hide a word before its loaded.
+    oboe('/hidden-tokens?' + paramString).done((it) => {
+      cloud.setExcludedWords(it["hidden-tokens"]); 
+    });
     $progress.remove();
     render();
   });
 
   cloud.observe("inclusionchange", function(included, excluded) {
+    var eraserMode = modeSwitcher.modesMap["eraser-mode"].mode;
     render();
-    modeSwitcher.currentMode.handleInclusionChange(included, excluded);
+    oboe({
+      "url": "/hidden-tokens?" + paramString, 
+      "method": "PUT", 
+      "body": {"hidden-tokens": Object.keys(excluded)} 
+    });
+    eraserMode.handleInclusionChange(included, excluded);
   });
 
   $html.click((e) => { 
