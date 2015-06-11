@@ -4,8 +4,8 @@
 var express            = require('express')
   , morgan             = require('morgan')
   , bodyParser         = require('body-parser')
-  , oboe               = require('./lib/oboe-requester')
-  , API                = require('./lib/api')
+  , oboe               = require('oboe')
+  , API                = require('overview-api-node')
   , DocSetTokenCounter = require('./lib/doc-set-token-counter')
   , SendInterval       = 500 // ms between sends
   , app                = express();
@@ -16,9 +16,9 @@ app.use(bodyParser.json());
 var nextRequestId = 1;
 
 app.get('/generate', function(req, res, next) {
-  var api = new API(req.query.server, req.query.apiToken)
+  var api = new API(req.query.server, req.query.apiToken, oboe)
     , requestId = nextRequestId++, requestStartDate = new Date()
-    , storeStream = api.getStoreState(oboe), docStream
+    , storeStream = api.store().getState(), docStream
     , sendTimeoutId;
 
   res.header('Content-Type', 'application/json');
@@ -39,8 +39,8 @@ app.get('/generate', function(req, res, next) {
       var counter = new DocSetTokenCounter()
         , nDocumentsProcessed = 0, nDocumentsTotal
         , firstSend = true;
-      
-      docStream = api.getAllDocuments(oboe, req.query.documentSetId, "random");
+
+      docStream = api.docSet(req.query.documentSetId).getDocuments(undefined, "random");
       docStream
         .node('pagination.total', function(total) {
           nDocumentsTotal = total;
@@ -57,7 +57,7 @@ app.get('/generate', function(req, res, next) {
           var lastJson = getSnapshotJson();
           clearTimeout(sendTimeoutId);
           sendSnapshot(true, lastJson);
-          api.setStoreState(oboe, lastJson);
+          api.store().setState(lastJson);
         });
     }
 
@@ -124,8 +124,8 @@ app.get('/metadata', function(req, res, next) {
 // tokens before main state has been completely computed and saved (such
 // that saving the main state would override the hidden words).
 app.get('/hidden-tokens', function(req, res, next) {
-  var api = new API(req.query.server, req.query.apiToken)
-    , storeStream = api.getStoreObjects(oboe);
+  var api = new API(req.query.server, req.query.apiToken, oboe)
+    , storeStream = api.store().getObjects();
 
   storeStream.done(function(storeObjects) {
     if(storeObjects[0]) {
@@ -138,8 +138,8 @@ app.get('/hidden-tokens', function(req, res, next) {
 });
 
 app.put('/hidden-tokens', function(req, res, next) {
-  var api = new API(req.query.server, req.query.apiToken)
-    , storeStream = api.getStoreObjects(oboe)
+  var api = new API(req.query.server, req.query.apiToken, oboe)
+    , storeStream = api.store().getObjects()
     , storeData = {
         "indexedString": "hidden tokens",
         "json": {"hidden-tokens": req.body["hidden-tokens"]}
@@ -147,10 +147,10 @@ app.put('/hidden-tokens', function(req, res, next) {
 
   storeStream.done(function(storeObjects) {
     if(storeObjects[0]) {
-      api.updateStoreObject(oboe, storeObjects[0].id, storeData);
+      api.store().object(storeObjects[0].id).update(storeData);
     }
     else {
-      api.createStoreObject(oboe, storeData);
+      api.store().createObject(storeData);
     }
     res.status(204).end();
   });
