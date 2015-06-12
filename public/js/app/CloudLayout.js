@@ -26,7 +26,7 @@ class CloudLayout {
 
     this.percentComplete = 0;
 
-    this.fontScale = d3.scale.linear() 
+    this.fontScale = d3.scale.linear()
       .domain([1, Infinity])
       .range([10, 54]);
 
@@ -58,8 +58,8 @@ class CloudLayout {
     if(size[0] != currSize[0] || size[1] != currSize[1]) {
       this.layout.size(size);
       this.container.style.width = size[0] + 'px';
-      this.container.style.height = size[1] + 'px'; 
-      this.containerSvgElm.attr('width', size[0]).attr('height', size[1]); 
+      this.container.style.height = size[1] + 'px';
+      this.containerSvgElm.attr('width', size[0]).attr('height', size[1]);
     }
   }
 
@@ -111,17 +111,17 @@ class CloudLayout {
         }
       }
       else {
-        nTokensToShow += 1; 
+        nTokensToShow += 1;
         tokenArea += getTokenArea(potentialToken);
       }
     }
     tokensArray = tokensArray.slice(0, Math.ceil(nTokensToShow*this.percentComplete));
 
-    // Save the [x, y] of the existing nodes into an object, 
+    // Save the [x, y] of the existing nodes into an object,
     // so we can keep their positions if they're still in the cloud.
-    oldNodePositions = this.layout.nodes().reduce((prev, d) => { 
-      prev[d.text] = [d.x, d.y]; 
-      return prev; 
+    oldNodePositions = this.layout.nodes().reduce((prev, d) => {
+      prev[d.text] = [d.x, d.y];
+      return prev;
     }, {});
 
     // Build the new nodes.
@@ -135,7 +135,7 @@ class CloudLayout {
       else {
         let angle = 2*Math.PI*((hashString(node.text) % 360)/360);
 
-        let distanceToEdgeAtAngle = 
+        let distanceToEdgeAtAngle =
           distanceFromCenterToNearestEdgeAtAngle(center[0], center[1], angle);
 
         let r = distanceToEdgeAtAngle*(1-this.toCenterScale(node.value));
@@ -169,7 +169,7 @@ class CloudLayout {
     if(rebuildCollisionHandler) {
       this._collisionFreeCompactor = this.nodeHelpers.collisionFreeCompactor(
         this.layout.nodes(),
-        10,
+        8,
         this.toCenterScale.domain()[1],
         size,
         this
@@ -246,7 +246,7 @@ CloudLayout.prototype.nodeHelpers = {
   text:       function(d)    { return d.text; },
   color:      function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; },
   fontSize:   function(fontScale, d) { return fontScale(d.value) + 'px'; },
-  visualSize: function(d, fontScale, leading = 1.4) { 
+  visualSize: function(d, fontScale, leading = 1.4) {
     return [d.text.length*fontScale(d.value)*.55, fontScale(d.value)*leading];
   },
   collisionFreeCompactor: function(nodes, padding, maxImportance, canvasSize, self) {
@@ -255,13 +255,13 @@ CloudLayout.prototype.nodeHelpers = {
       return {
         left: node.x - size[0]/2 - padding,
         right: node.x + size[0]/2 + padding,
-        top: node.y - size[1]*.75 + padding,    //.75 and .25 are an adjustment for 
-        bottom: node.y + size[1]*.25 + padding, //descenders, as .x and .y refer to text-bottom.
+        top: node.y - size[1]*.75 - padding,    //.75 and .25 are an adjustment for
+        bottom: node.y + size[1]*.25 + padding, //descenders, as .y refers to text-bottom.
       };
     };
 
     var center = (offsets) => [
-      offsets.left + (offsets.right-offsets.left)/2, 
+      offsets.left + (offsets.right-offsets.left)/2,
       offsets.top + (offsets.bottom - offsets.top)/2
     ];
 
@@ -282,24 +282,24 @@ CloudLayout.prototype.nodeHelpers = {
           // This is the (top node's bottom - the bottom node's top), i.e. how
           // much you would need to move the top node up (or the bottom node down)
           // to end the overlap. A negative value means there's no overlap.
-          let overlapY = (topNode === d ? 
+          let overlapY = (topNode === d ?
             nodeOffsets.bottom - currOffsets.top :
             currOffsets.bottom - nodeOffsets.top
           );
 
-          // The equivalent calculation for x: how much we need to move 
+          // The equivalent calculation for x: how much we need to move
           // the left node left (or the right node right) to end the overlap.
-          let overlapX = (leftNode === d ? 
+          let overlapX = (leftNode === d ?
             nodeOffsets.right - currOffsets.left :
             currOffsets.right - nodeOffsets.left
           );
 
           // Two points overlap only if they overlap in both x and y.
           if(overlapX >= 0 && overlapY >= 0) {
-            // To end the collision, we're going to we're going to move 
+            // To end the collision, we're going to we're going to move
             // the nodes along the dimension that requires less displacement.
-            // It's tempting to try to only move one of the colliding nodes, 
-            // e.g. only the one with the lower value, but doing this seems to 
+            // It's tempting to try to only move one of the colliding nodes,
+            // e.g. only the one with the lower value, but doing this seems to
             // bias the node placement so the whole graph ends up moving away
             // from the center.
             let dimension = overlapY < overlapX ? 'y' : 'x';
@@ -308,11 +308,11 @@ CloudLayout.prototype.nodeHelpers = {
               'y': overlapY*(d === topNode ? -1 : 1)
             }
 
-            //1.4 here is a "magic value", balancing the strength of the 
+            //1.4 here is a "magic value", balancing the strength of the
             //repulsion, to make sure collisions actually end up being avoided,
             //with the need to not introduce new collisions with our adjustment.
             let shift = (1.4*alpha)*shifts[dimension]/2;
-            
+
             d[dimension] += shift;
             currNode[dimension] -= shift;
 
@@ -323,7 +323,7 @@ CloudLayout.prototype.nodeHelpers = {
             }
             else {
               nodeOffsets.top += shift;
-              nodeOffsets.bottom += shift; 
+              nodeOffsets.bottom += shift;
             }
           }
 
@@ -342,22 +342,22 @@ CloudLayout.prototype.nodeHelpers = {
               offsetsToCartesian(currCenter, nodeCenter)
             );
 
-            // Now, of that line segment of length r, we don't want to count 
+            // Now, of that line segment of length r, we don't want to count
             // parts that are contained within either word's bounds, as we're
             // moving them together only to the extent that they don't overlap.
             // So, we find the distance from each word's centroid to its nearest
             // edge along angle, and we subtract those distances from r.
-            let nodeDistanceToNearestEdge = 
+            let nodeDistanceToNearestEdge =
               distanceFromCenterToNearestEdgeAtAngle(nodeWidth, nodeHeight, angle);
 
-            let currDistanceToNearestEdge = 
+            let currDistanceToNearestEdge =
               distanceFromCenterToNearestEdgeAtAngle(currWidth, currHeight, angle);
 
-            let distanceToMove = 
+            let distanceToMove =
               r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
 
-            //.00038 here is a magic value balancing compactness against 
-            //introducing more collisions, as is 1.4 below. Making the shifts 
+            //.00038 here is a magic value balancing compactness against
+            //introducing more collisions, as is 1.4 below. Making the shifts
             //proportional to alpha^1.4 instead of just alpha means that the
             //collision avoidance shifts (which are proportional just to alpha)
             //becomes more dominant in the later iterations.
@@ -378,7 +378,7 @@ CloudLayout.prototype.nodeHelpers = {
           }
         }
       }
-    }; 
+    };
   }
 };
 
@@ -386,7 +386,7 @@ function distanceFromCenterToNearestEdgeAtAngle(canvasWidth, canvasHeight, angle
   return Math.min(
     Math.abs(canvasWidth/Math.cos(angle)),
     Math.abs(canvasHeight/Math.sin(angle))
-  ); 
+  );
 }
 
 function tokensToArray(tokens) {

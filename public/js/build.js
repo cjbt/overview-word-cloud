@@ -13702,7 +13702,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
             this.setPercentComplete(percentComplete);
             this.setTokens(tokens);
             if (rebuildCollisionHandler) {
-              this._collisionFreeCompactor = this.nodeHelpers.collisionFreeCompactor(this.layout.nodes(), 10, this.toCenterScale.domain()[1], size, this);
+              this._collisionFreeCompactor = this.nodeHelpers.collisionFreeCompactor(this.layout.nodes(), 8, this.toCenterScale.domain()[1], size, this);
             }
             this.layout.start();
           },
@@ -13765,7 +13765,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
             return {
               left: node.x - size[0] / 2 - padding,
               right: node.x + size[0] / 2 + padding,
-              top: node.y - size[1] * .75 + padding,
+              top: node.y - size[1] * .75 - padding,
               bottom: node.y + size[1] * .25 + padding
             };
           });
