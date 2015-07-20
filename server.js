@@ -53,6 +53,14 @@ var Stopwords = {
   "you'll": true, "you're": true, "you've": true, "your": true, "yours": true, 
   "yourself": true, "yourselves": true
 };
+/*
+ * Storage version format: 2
+ *
+ * 1: { progress: 1, tokens: [ [ 'foo', 2 ], ... ] }
+ * 2: { version: 2, tokens: [ { name: 'foo', nDocuments: 2, frequency: 5 } ] },
+ *    with overview-js-tokenizer 0.0.2.
+ */
+var StorageFormatVersion = 2;
 
 app.get('/generate', function(req, res, next) {
   var api = new API(req.query.server, req.query.apiToken, oboe)
@@ -65,8 +73,8 @@ app.get('/generate', function(req, res, next) {
 
   //Check the store. If we don't have a saved result, generate + save one.
   storeStream.done(function(json) {
-    if(!objIsEmpty(json)) {
-      res.end('[' + JSON.stringify(json) + ']');
+    if (typeof(json) === 'object' && json.version == StorageFormatVersion) {
+      res.json([ { progress: 1, tokens: json.tokens } ]);
       console.log(
         '[req %d] sent the JSON for docset %d from the store - %d ms elapsed',
         requestId,
@@ -98,7 +106,10 @@ app.get('/generate', function(req, res, next) {
           var lastJson = getSnapshotJson();
           clearTimeout(sendTimeoutId);
           sendSnapshot(true, lastJson);
-          api.store().setState(lastJson);
+          api.store().setState({
+            version: StorageFormatVersion,
+            tokens: lastJson.tokens
+          });
         });
     }
 
@@ -106,14 +117,14 @@ app.get('/generate', function(req, res, next) {
       var tokens = tokenBin.getTokensByFrequency().slice(0, MaxNTokens)
         , progress = nDocumentsTotal ? (tokenBin.nDocuments / nDocumentsTotal) : 0;
 
-      return JSON.stringify({
+      return {
         "progress": progress,
         "tokens": tokens
-      });
+      };
     }
 
     function sendSnapshot(lastSend, json) {
-      res.write((firstSend ? "[" : ",") + json);
+      res.write((firstSend ? "[" : ",") + JSON.stringify(json));
       firstSend = false;
 
       if (lastSend) {
@@ -200,11 +211,3 @@ app.put('/hidden-tokens', function(req, res, next) {
 app.use('/static', express.static(__dirname + '/public'));
 app.listen(process.env.PORT || 3000);
 console.log('Listening on port ' + (process.env.PORT || 3000));
-
-function objIsEmpty(obj) {
-  var hasOwnProperty = Object.prototype.hasOwnProperty;
-  for (var key in obj) {
-    if (hasOwnProperty.call(obj, key)) return false;
-  }
-  return true;
-}
