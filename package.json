@@ -18,7 +18,9 @@
     "jade": "^1.7.0",
     "morgan": "^1.5.0",
     "oboe": "^2.0.2",
-    "overview-api-node": "2.x.x"
+    "overview-api-node": "2.x.x",
+    "overview-js-token-bin": "0.0.4",
+    "overview-js-tokenizer": "0.0.2"
   },
   "devDependencies": {
     "gulp": "^3.8.10",

@@ -13546,16 +13546,6 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
   function distanceFromCenterToNearestEdgeAtAngle(canvasWidth, canvasHeight, angle) {
     return Math.min(Math.abs(canvasWidth / Math.cos(angle)), Math.abs(canvasHeight / Math.sin(angle)));
   }
-  function tokensToArray(tokens) {
-    return Object.keys(tokens).map((function(k) {
-      return ({
-        text: k,
-        value: tokens[k]
-      });
-    })).sort((function(o1, o2) {
-      return o2.value - o1.value;
-    }));
-  }
   function hashString(string) {
     var hash = 0,
         i,
@@ -13637,7 +13627,12 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
                 }),
                 nodes,
                 oldNodePositions;
-            var tokensArray = tokensToArray(tokens),
+            var tokensArray = tokens.map((function(t) {
+              return ({
+                text: t.name,
+                value: t.frequency
+              });
+            })),
                 tokensArrayLen = tokensArray.length,
                 minValue = Infinity,
                 maxValue = 0,
@@ -13743,7 +13738,7 @@ System.register("app/CloudLayout", ["lib/webfont", "lib/d3", "./utils"], functio
       }());
       CloudLayout.prototype.nodeHelpers = {
         transform: function(d) {
-          return "translate(" + [d.x, d.y] + ")";
+          return "translate(" + [d.x || 0, d.y || 0] + ")";
         },
         text: function(d) {
           return d.text;

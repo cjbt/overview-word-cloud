@@ -73,7 +73,7 @@ class CloudLayout {
       , xAccessor = d => d.x, yAccessor = d => d.y
       , nodes, oldNodePositions;
 
-    var tokensArray = tokensToArray(tokens)
+    var tokensArray = tokens.map((t) => ({ text: t.name, value: t.frequency }))
       , tokensArrayLen = tokensArray.length
       , minValue = Infinity, maxValue = 0, nTokensToShow = 0
       , tokenArea = 0, goalArea = .48*size[0]*size[1];
@@ -242,7 +242,7 @@ class CloudLayout {
 }
 
 CloudLayout.prototype.nodeHelpers = {
-  transform:  function(d)    { return "translate(" + [d.x, d.y] + ")"; },
+  transform:  function(d)    { return "translate(" + [d.x || 0, d.y || 0] + ")"; },
   text:       function(d)    { return d.text; },
   color:      function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; },
   fontSize:   function(fontScale, d) { return fontScale(d.value) + 'px'; },
@@ -387,12 +387,6 @@ function distanceFromCenterToNearestEdgeAtAngle(canvasWidth, canvasHeight, angle
     Math.abs(canvasWidth/Math.cos(angle)),
     Math.abs(canvasHeight/Math.sin(angle))
   );
-}
-
-function tokensToArray(tokens) {
-  return Object.keys(tokens)
-    .map((k) => ({text: k, value: tokens[k]}))
-    .sort((o1, o2) => o2.value - o1.value);
 }
 
 function hashString(string) {
