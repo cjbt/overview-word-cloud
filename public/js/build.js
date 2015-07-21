@@ -13357,7 +13357,7 @@ System.register("app/EraserMode", [], function($__export) {
             this.$hiddenWordsButton.hide();
             this.$hiddenCounter.hide();
           },
-          handleInclusionChange: function(included, excluded, excludedArr) {
+          handleInclusionChange: function(excludedArr) {
             var excludedListHTML = excludedArr.reduce(function(prev, word) {
               return '<li>' + word + '</li>' + prev;
             }, "");
@@ -13466,7 +13466,7 @@ System.register("app/OverviewWordCloud", ["./utils"], function($__export) {
       OverviewWordCloud = (function() {
         var OverviewWordCloud = function OverviewWordCloud() {
           this.progress = 0;
-          this.words = {};
+          this.tokens = [];
           this.excluded = {};
           this.excludedKeysOrdered = [];
         };
@@ -13474,51 +13474,47 @@ System.register("app/OverviewWordCloud", ["./utils"], function($__export) {
           start: function(DataStreamer) {
             var $__0 = this;
             DataStreamer().node("![*]", (function(data) {
-              $__0.words = data.tokens;
-              $__0._dispatch("data", [$__0.words, $__0.progress]);
+              $__0.tokens = data.tokens;
               $__0.updateProgress(data.progress);
               return oboe.drop;
             })).done((function() {
-              return $__0._dispatch("done", [$__0.words, $__0.progress]);
+              return $__0._dispatch("done", []);
+            }));
+          },
+          getTokens: function() {
+            var $__0 = this;
+            return this.tokens.filter((function(token) {
+              return !$__0.excluded.hasOwnProperty(token.name);
             }));
           },
           updateProgress: function(newProgress) {
             var oldProgress = this.progress;
             if (newProgress > oldProgress) {
               this.progress = newProgress;
-              this._dispatch("progress", [newProgress, oldProgress, this.words]);
+              this._dispatch("progress", [newProgress]);
             }
           },
           setExcludedWords: function(exclude) {
             var $__0 = this;
-            for (var key in this.excluded) {
-              this.words[key] = this.excluded[key];
-            }
             this.excluded = {};
-            this.excludedKeysOrdered = [];
+            this.excludedKeysOrdered = exclude.slice(0);
             exclude.forEach((function(word) {
-              $__0.excludeWord(word, false);
+              return $__0.excluded[word] = null;
             }));
-            this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
+            this._dispatch("inclusionchange", [this.excludedKeysOrdered]);
           },
-          includeWord: function(word, fireEvent) {
+          includeWord: function(word) {
             if (this.excluded.hasOwnProperty(word)) {
-              this.words[word] = this.excluded[word];
               delete this.excluded[word];
               this.excludedKeysOrdered.splice(this.excludedKeysOrdered.indexOf(word), 1);
-            }
-            if (fireEvent !== false) {
-              this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
+              this._dispatch("inclusionchange", [this.excludedKeysOrdered]);
             }
           },
-          excludeWord: function(word, fireEvent) {
-            if (this.words.hasOwnProperty(word)) {
-              this.excluded[word] = this.words[word];
-              delete this.words[word];
+          excludeWord: function(word) {
+            if (!this.excluded.hasOwnProperty(word)) {
+              this.excluded[word] = null;
               this.excludedKeysOrdered.push(word);
-            }
-            if (fireEvent !== false) {
-              this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
+              this._dispatch("inclusionchange", [this.excludedKeysOrdered]);
             }
           }
         }, {});
@@ -13893,7 +13889,7 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
           $progress.remove();
           render();
         });
-        cloud.observe("inclusionchange", function(included, excluded, excludedArr) {
+        cloud.observe("inclusionchange", function(excludedArr) {
           var eraserMode = modeSwitcher.modesMap["eraser-mode"].mode;
           render();
           oboe({
@@ -13901,7 +13897,7 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
             "method": "PUT",
             "body": {"hidden-tokens": excludedArr}
           });
-          eraserMode.handleInclusionChange(included, excluded, excludedArr);
+          eraserMode.handleInclusionChange(excludedArr);
         });
         $html.click((function(e) {
           modeSwitcher.currentMode.handleClick(e, server);
@@ -13916,7 +13912,7 @@ System.register("app/app", ["lib/jquery", "lib/oboe-browser", "lib/modernizr.cus
           resizeTimer = setTimeout(render, 100);
         });
         function render() {
-          layout.render($container[0], [parseInt($window.width(), 10), parseInt($window.height(), 10)], cloud.words, cloud.progress);
+          layout.render($container[0], [parseInt($window.width(), 10), parseInt($window.height(), 10)], cloud.getTokens(), cloud.progress);
         }
         ;
       });

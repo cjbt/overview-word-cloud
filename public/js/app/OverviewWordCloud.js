@@ -3,7 +3,7 @@ import {Observable} from './utils';
 class OverviewWordCloud {
   constructor() {
     this.progress = 0;
-    this.words = {};
+    this.tokens = [];
     this.excluded = {};
     this.excludedKeysOrdered = []
   }
@@ -11,53 +11,46 @@ class OverviewWordCloud {
   start(DataStreamer) {
     DataStreamer()
       .node("![*]", (data) => {
-        this.words = data.tokens;
-        this._dispatch("data", [this.words, this.progress]);
+        this.tokens = data.tokens;
         this.updateProgress(data.progress);
         return oboe.drop;
       })
-      .done(() => this._dispatch("done", [this.words, this.progress]));
+      .done(() => this._dispatch("done", []));
+  }
+
+  getTokens() {
+    return this.tokens.filter((token) => !this.excluded.hasOwnProperty(token.name))
   }
 
   updateProgress(newProgress) {
     var oldProgress = this.progress;
     if(newProgress > oldProgress) {
       this.progress = newProgress;
-      this._dispatch("progress", [newProgress, oldProgress, this.words]);
+      this._dispatch("progress", [newProgress]);
     }
   }
 
   setExcludedWords(exclude) {
-    for(var key in this.excluded) {
-      this.words[key] = this.excluded[key];
-    }
-
     this.excluded = {};
-    this.excludedKeysOrdered = [];
-    exclude.forEach((word) => { this.excludeWord(word, false) });
+    this.excludedKeysOrdered = exclude.slice(0);
+    exclude.forEach((word) => this.excluded[word] = null);
 
-    this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
+    this._dispatch("inclusionchange", [this.excludedKeysOrdered]);
   }
 
-  includeWord(word, fireEvent) {
-    if(this.excluded.hasOwnProperty(word)) {
-      this.words[word] = this.excluded[word];
+  includeWord(word) {
+    if (this.excluded.hasOwnProperty(word)) {
       delete this.excluded[word];
       this.excludedKeysOrdered.splice(this.excludedKeysOrdered.indexOf(word), 1);
-    }
-    if(fireEvent !== false) {
-      this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
+      this._dispatch("inclusionchange", [this.excludedKeysOrdered]);
     }
   }
 
-  excludeWord(word, fireEvent) {
-    if(this.words.hasOwnProperty(word)) {
-      this.excluded[word] = this.words[word];
-      delete this.words[word];
+  excludeWord(word) {
+    if (!this.excluded.hasOwnProperty(word)) {
+      this.excluded[word] = null;
       this.excludedKeysOrdered.push(word);
-    }
-    if(fireEvent !== false) {
-      this._dispatch("inclusionchange", [this.words, this.excluded, this.excludedKeysOrdered]);
+      this._dispatch("inclusionchange", [this.excludedKeysOrdered]);
     }
   }
 }

@@ -16,7 +16,7 @@ export default class EraserMode {
     this.$hiddenCounter.hide();
   }
 
-  handleInclusionChange(included, excluded, excludedArr) {
+  handleInclusionChange(excludedArr) {
     var excludedListHTML = excludedArr.reduce(function(prev, word) {
       return '<li>' + word + '</li>' + prev;
     }, "");

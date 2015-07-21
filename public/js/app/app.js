@@ -42,7 +42,7 @@ export default function(paramString, server) {
     render();
   });
 
-  cloud.observe("inclusionchange", function(included, excluded, excludedArr) {
+  cloud.observe("inclusionchange", function(excludedArr) {
     var eraserMode = modeSwitcher.modesMap["eraser-mode"].mode;
     render();
     oboe({
@@ -50,7 +50,7 @@ export default function(paramString, server) {
       "method": "PUT", 
       "body": {"hidden-tokens": excludedArr} 
     });
-    eraserMode.handleInclusionChange(included, excluded, excludedArr);
+    eraserMode.handleInclusionChange(excludedArr);
   });
 
   $html.click((e) => { 
@@ -72,7 +72,7 @@ export default function(paramString, server) {
     layout.render(
       $container[0],
       [parseInt($window.width(), 10), parseInt($window.height(), 10)],
-      cloud.words, 
+      cloud.getTokens(), 
       cloud.progress
     );
   };
