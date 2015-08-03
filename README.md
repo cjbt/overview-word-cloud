@@ -1,6 +1,9 @@
 overview-word-cloud
 ===================
 
+Shows the most common words in a document set. Larger words are more common
+than smaller words.
+
 This is a plugin for Overview. You can see it live on
 https://www.overviewdocs.com.
 
