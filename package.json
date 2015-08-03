@@ -24,7 +24,6 @@
   },
   "devDependencies": {
     "gulp": "^3.8.10",
-    "pm2": "^0.12.5",
     "systemjs-builder": "^0.4.1"
   }
 }
