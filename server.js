@@ -6,7 +6,6 @@ var express            = require('express')
   , bodyParser         = require('body-parser')
   , oboe               = require('oboe')
   , API                = require('overview-api-node')
-  , tokenize           = require('overview-js-tokenizer').tokenize
   , TokenBin           = require('overview-js-token-bin')
   , SendInterval       = 500 // ms between sends
   , MaxNTokens         = 150 // tokens sent to client
@@ -87,7 +86,7 @@ app.get('/generate', function(req, res, next) {
       var nDocumentsTotal
         , firstSend = true;
 
-      docStream = api.docSet(req.query.documentSetId).getDocuments(undefined, "random");
+      docStream = api.docSet(req.query.documentSetId).getDocuments([ "tokens" ], "random");
       docStream
         .node('pagination.total', function(total) {
           nDocumentsTotal = total;
@@ -95,8 +94,9 @@ app.get('/generate', function(req, res, next) {
           sendTimeoutId = setTimeout(sendSnapshotAndQueue, SendInterval);
         })
         .node('items.*', function(doc) {
-          tokenStream = tokenize(doc.text)
-            .map(function(t) { return t.toLowerCase(); })
+          tokenStream = doc.tokens
+            .toLowerCase()
+            .split(' ')
             .filter(function(t) { return !(t in Stopwords); });
           tokenBin.addTokens(tokenStream);
 
