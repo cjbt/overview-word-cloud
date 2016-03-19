@@ -5,7 +5,9 @@ Shows the most common words in a document set. Larger words are more common
 than smaller words.
 
 This is a plugin for Overview. You can see it live on
-https://www.overviewdocs.com.
+https://www.overviewdocs.com, or in the video below:
+
+<a href="https://www.youtube.com/watch?v=Et6F9Zerr44"><img src="http://ethanresnick.com/misc/wordcloud-poster.png" /></a><a href="https://www.youtube.com/watch?v=Et6F9Zerr44">https://www.youtube.com/watch?v=Et6F9Zerr44</a>
 
 To run with your local Overview install:
 
