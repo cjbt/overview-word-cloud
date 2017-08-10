@@ -15,6 +15,7 @@ app.use(morgan('combined'));
 app.use(bodyParser.json());
 
 var nextRequestId = 1;
+var MinWordLength = 3;
 var Stopwords = {
   "a": true, "about": true, "above": true, "after": true, "again": true, 
   "against": true, "all": true, "am": true, "an": true, "and": true, 
@@ -97,7 +98,8 @@ app.get('/generate', function(req, res, next) {
           tokenStream = doc.tokens
             .toLowerCase()
             .split(' ')
-            .filter(function(t) { return !(t in Stopwords); });
+            .filter(function(t) { return !(t in Stopwords); })
+            .filter(function(t) { return t.length >= MinWordLength; });
           tokenBin.addTokens(tokenStream);
 
           return oboe.drop; //remove the doc from memory
