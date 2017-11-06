@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-
 'use strict';
-var express            = require('express')
+
+const express            = require('express')
   , morgan             = require('morgan')
   , bodyParser         = require('body-parser')
   , oboe               = require('oboe')
@@ -11,7 +11,7 @@ var express            = require('express')
   , MaxNTokens         = 150 // tokens sent to client
   , app                = express();
 
-app.use(morgan('combined'));
+app.use(morgan('short'));
 app.use(bodyParser.json());
 
 var nextRequestId = 1;
