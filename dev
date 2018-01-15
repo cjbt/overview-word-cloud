@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -e
+
+DIR="$(dirname "$0")"
+
+EXTRA_DOCKER_RUN_ARGS="--publish 127.0.0.1:3334:80 --name plugin-word-cloud" \
+exec "$DIR"/in-docker sh -m -c 'webpack --watch & ./server.js & wait; pkill -9 -P1; wait %1; wait %2'

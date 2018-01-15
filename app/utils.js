@@ -1,33 +1,3 @@
-function registerObserver(event, fn) {
-  (this.listeners[event] || (this.listeners[event] = [])).push(fn);
-}
-
-function dispatch(event, argsArr) {
-  if(this.listeners[event] instanceof Array) {
-    this.listeners[event].forEach((listener) => listener.apply(this, argsArr));
-  }
-};
-
-//Takes in a constructor function and returns a new one that will
-//give constructed objects an observer pattern implementation.
-export function Observable(constructorFn) {
-  if(!constructorFn.prototype.observe) {
-    constructorFn.prototype.observe = registerObserver;
-  }
-
-  //Add a function to the object for dispatching events.
-  if(!constructorFn.prototype._dispatch) {
-    constructorFn.prototype._dispatch = dispatch;
-  }
-
-  return function() {
-    var obj = Object.create(constructorFn.prototype);
-    obj.listeners = {};
-    constructorFn.apply(obj, arguments);
-    return obj;
-  }
-}
-
 //read points that come in as {x, y} or [x, y] or {r, theta} or [r, theta]
 //and always convert them to a 2d array.
 function readPoint(point) {

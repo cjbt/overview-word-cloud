@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 'use strict';
 
-const express            = require('express')
-  , morgan             = require('morgan')
-  , bodyParser         = require('body-parser')
-  , oboe               = require('oboe')
-  , API                = require('overview-api-node')
-  , TokenBin           = require('overview-js-token-bin')
-  , SendInterval       = 500 // ms between sends
-  , MaxNTokens         = 150 // tokens sent to client
-  , app                = express();
+const express       = require('express')
+const fs            = require('fs')
+const morgan        = require('morgan')
+const bodyParser    = require('body-parser')
+const util          = require('util')
+const oboe          = require('oboe')
+const API           = require('overview-api-node')
+const TokenBin      = require('overview-js-token-bin')
+const SendInterval  = 500 // ms between sends
+const MaxNTokens    = 150 // tokens sent to client
+const app           = express();
 
 app.use(morgan('short'));
 app.use(bodyParser.json());
@@ -161,16 +163,38 @@ app.get('/generate', function(req, res, next) {
   req.on('close', abort);
 });
 
-app.get('/show', function(req, res, next) {
-  //just render the view. it'll make requests from
-  //the client to /generate with any selection info.
-  res.render('show.jade', req.query);
-});
+const readFilePromise = util.promisify(fs.readFile)
+const setTimeoutPromise = util.promisify(setTimeout)
+function readShowHtml() {
+  return readFilePromise('./dist/show')
+    .catch((e) => {
+      if (e.code === 'ENOENT') {
+        console.log('Waiting 1s for Webpack to generate dist/show')
 
-app.get('/metadata', function(req, res, next) {
-  res.status(204).header('Access-Control-Allow-Origin', '*').send();
+        return setTimeoutPromise(1000, null)
+          .then(() => readShowHtml())
+      }
+    })
+}
+
+app.get('/show', function(req, res, next) {
+  readShowHtml()
+    .then(htmlBytes => {
+      res
+        .status(200)
+        .header('Content-Type', 'text/html; charset=utf-8')
+        .header('Cache-Control', 'public; max-age=10')
+        .send(htmlBytes)
+    })
 })
 
+app.get('/metadata', function(req, res, next) {
+  res
+    .status(200)
+    .header('Access-Control-Allow-Origin', '*')
+    .header('Content-Type', 'application/json')
+    .send('{}')
+})
 
 // Below, we read/write the hidden tokens to a separate StoreObject, not
 // the Store's main state, because doing so means we don't have to worry
@@ -210,6 +234,9 @@ app.put('/hidden-tokens', function(req, res, next) {
   });
 });
 
-app.use('/static', express.static(__dirname + '/public'));
+app.use(express.static(__dirname + '/dist', {
+  immutable: true,
+  index: false,
+}));
 app.listen(process.env.PORT || 3000);
 console.log('Listening on port ' + (process.env.PORT || 3000));

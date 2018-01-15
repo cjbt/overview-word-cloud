@@ -1,0 +1,58 @@
+version: '3.4'
+
+services:
+  # === Overview: you probably don't want to edit this ===
+  overview-web:
+    image: overview/overview-web:${OVERVIEW_VERSION}
+    networks: [ 'default', 'database', 'redis', 'worker' ]
+    depends_on: [ 'overview-database', 'overview-redis', 'overview-worker' ]
+    volumes:
+      - blob-storage:/var/lib/overview/blob-storage
+
+  overview-worker:
+    image: overview/overview-worker:${OVERVIEW_VERSION}
+    networks: [ 'database', 'worker' ]
+    depends_on: [ 'overview-database' ]
+    volumes:
+      - blob-storage:/var/lib/overview/blob-storage
+
+  overview-database:
+    image: overview/overview-database:${OVERVIEW_VERSION}
+    networks: [ 'database' ]
+
+  overview-redis:
+    image: overview/overview-redis:${OVERVIEW_VERSION}
+    networks: [ 'redis' ]
+
+  overview-db-evolution-applier:
+    image: overview/overview-db-evolution-applier:${OVERVIEW_VERSION}
+    networks: [ 'database' ]
+    depends_on: [ 'overview-database' ]
+
+  # === Your project (e.g., your plugin): you probably _do_ want to edit this ===
+  plugin-word-cloud:
+    build: ..
+
+  # === The integration-test runner ===
+  integration-test:
+    image: overview/overview-integration-tester:${OVERVIEW_INTEGRATION_TESTER_VERSION}
+    depends_on: [ 'overview-web', 'plugin-word-cloud' ]
+    environment:
+      OVERVIEW_URL: http://overview-web
+      WAIT_FOR_URLS: ${WAIT_FOR_URLS}
+      HEADLESS: 'true'
+    volumes:
+      - ./files:/app/files
+      - ./helpers:/app/helpers
+      - ./spec:/app/spec
+      - ./reports:/app/reports
+
+networks:
+  default:
+  database:
+  redis:
+  worker:
+
+# Most data is transient. only one directory is shared.
+volumes:
+  blob-storage:

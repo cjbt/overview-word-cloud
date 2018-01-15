@@ -1,11 +1,20 @@
-import {Observable} from './utils';
-
-class OverviewWordCloud {
+export default class OverviewWordCloud {
   constructor() {
-    this.progress = 0;
-    this.tokens = [];
-    this.excluded = {};
+    this.progress = 0
+    this.tokens = []
+    this.excluded = {}
     this.excludedKeysOrdered = []
+    this.listeners = {}
+  }
+
+  observe(ev, fn) {
+    (this.listeners[ev] || (this.listeners[ev] = [])).push(fn)
+  }
+
+  _dispatch(ev, ...args) {
+    if (this.listeners[ev] instanceof Array) {
+      this.listeners[ev].forEach(listener => listener.apply(this, args))
+    }
   }
 
   start(DataStreamer) {
@@ -15,7 +24,7 @@ class OverviewWordCloud {
         this.updateProgress(data.progress);
         return oboe.drop;
       })
-      .done(() => this._dispatch("done", []));
+      .done(() => this._dispatch("done"));
   }
 
   getTokens() {
@@ -23,26 +32,25 @@ class OverviewWordCloud {
   }
 
   updateProgress(newProgress) {
-    var oldProgress = this.progress;
-    if(newProgress > oldProgress) {
+    if (newProgress > this.progress) {
       this.progress = newProgress;
-      this._dispatch("progress", [newProgress]);
+      this._dispatch("progress", newProgress);
     }
   }
 
   setExcludedWords(exclude) {
     this.excluded = {};
-    this.excludedKeysOrdered = exclude.slice(0);
+    this.excludedKeysOrdered = exclude.slice();
     exclude.forEach((word) => this.excluded[word] = null);
 
-    this._dispatch("inclusionchange", [this.excludedKeysOrdered]);
+    this._dispatch("inclusionchange", this.excludedKeysOrdered);
   }
 
   includeWord(word) {
     if (this.excluded.hasOwnProperty(word)) {
       delete this.excluded[word];
       this.excludedKeysOrdered.splice(this.excludedKeysOrdered.indexOf(word), 1);
-      this._dispatch("inclusionchange", [this.excludedKeysOrdered]);
+      this._dispatch("inclusionchange", this.excludedKeysOrdered);
     }
   }
 
@@ -50,9 +58,7 @@ class OverviewWordCloud {
     if (!this.excluded.hasOwnProperty(word)) {
       this.excluded[word] = null;
       this.excludedKeysOrdered.push(word);
-      this._dispatch("inclusionchange", [this.excludedKeysOrdered]);
+      this._dispatch("inclusionchange", this.excludedKeysOrdered);
     }
   }
 }
-
-export default Observable(OverviewWordCloud);

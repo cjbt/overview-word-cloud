@@ -13,12 +13,12 @@ export default class SearchMode {
         .find('.active').attr('class', '');
   }
 
-  handleClick(e, server) {
+  handleClick(e, origin) {
     if(e.target.tagName.toLowerCase() !== 'text') {  
       window.parent.postMessage({
         call: 'setDocumentListParams',
         args: [{}]
-      }, server);
+      }, origin);
 
       this.$container
         .removeClass('with-selection')
@@ -31,13 +31,13 @@ export default class SearchMode {
       window.parent.postMessage({
         call: 'setDocumentListParams',
         args: [{q: term}]
-      }, server);
+      }, origin);
 
       //manage classes. can't use $target.addClass()
       //because .className works differently in SVG
       this.$container.find('.active').removeAttr('class')
-      $(e.target).attr('class', 'active');
-      
+      e.target.classList.add('active')
+
       //start the animation
       this.$container.addClass('with-selection');
     }

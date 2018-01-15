@@ -1,20 +1,14 @@
-import WebFont from 'lib/webfont'
-import d3 from 'lib/d3'
+import d3 from './vendor/d3'
 import {polarToCartesian, cartesianToPolar, offsetsToCartesian, cartesianToOffsets, distance} from './utils'
 
-// Kick off the font loading, and get a Promise for its success.
-// (Right now we're not using this promise for anything, bc we're
-// generating the cloud based on rough estimates of how much space
+// Kick off the font loading. (Right now we're not using this for anything, bc
+// we're generating the cloud based on rough estimates of how much space
 // each word will take up, rather than typesetting it and measuring
 // the actual space. See CloudLayout.prototype.nodeHelpers.visualSize).
-var fontsDonePromise = new Promise((resolve, reject) => {
-  WebFont.load({
-    google: {families: ['Open Sans:400,700']},
-    timeout: 5000,
-    active: resolve,
-    inactive: reject
-  });
-});
+require('webfontloader').load({
+  google: {families: ['Open Sans:400,700']},
+  timeout: 5000,
+})
 
 class CloudLayout {
   constructor(friction = .9) {

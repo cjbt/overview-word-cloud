@@ -1,0 +1,19 @@
+#!/bin/sh
+
+set -e
+
+DIR="$(dirname "$0")"
+ABSDIR="$(realpath "$DIR")"
+
+# Build, and show output. (Otherwise the user won't see progress on slow steps)
+docker build "$DIR" --target=development
+
+IMAGE_ID="$(docker build -q "$DIR" --target=development)"
+
+exec docker run --rm -it \
+  --network overviewserver_default \
+  --volume "$ABSDIR"/app:/app/app:ro \
+  --volume "$ABSDIR"/server.js:/app/server.js:ro \
+  --volume "$ABSDIR"/webpack.config.js:/app/webpack.config.js:ro \
+  $EXTRA_DOCKER_RUN_ARGS \
+  $IMAGE_ID "$@"

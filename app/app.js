@@ -1,14 +1,15 @@
-import $ from 'lib/jquery'
-import oboe from 'lib/oboe-browser'
-import Modernizr from 'lib/modernizr.custom'
+import css from './show.css'
+
+import $ from './vendor/jquery'
+import oboe from './vendor/oboe-browser'
 import Cloud from './OverviewWordCloud'
 import CloudLayout from './CloudLayout'
 import SearchMode from './SearchMode'
 import EraserMode from './EraserMode'
 import ModeSwitcher from './ModeSwitcher'
-import Tooltip from 'lib/bootstrap.tooltip'
+import Tooltip from './vendor/bootstrap.tooltip'
 
-export default function(paramString, server) {
+export default function(paramString, server, origin) {
   var $window    = $(window)
     , $html      = $('html')
     , $container = $('#cloud-container')
@@ -35,7 +36,7 @@ export default function(paramString, server) {
   cloud.observe("done", function() {
     // hide words from before. do this on done because the system
     // will get confused if we try to hide a word before its loaded.
-    oboe('/hidden-tokens?' + paramString).done((it) => {
+    oboe('/hidden-tokens' + paramString).done((it) => {
       cloud.setExcludedWords(it["hidden-tokens"]); 
     });
     $progress.remove();
@@ -46,7 +47,7 @@ export default function(paramString, server) {
     var eraserMode = modeSwitcher.modesMap["eraser-mode"].mode;
     render();
     oboe({
-      "url": "/hidden-tokens?" + paramString, 
+      "url": "/hidden-tokens" + paramString, 
       "method": "PUT", 
       "body": {"hidden-tokens": excludedArr} 
     });
@@ -54,12 +55,12 @@ export default function(paramString, server) {
   });
 
   $html.click((e) => { 
-    modeSwitcher.currentMode.handleClick(e, server);
+    modeSwitcher.currentMode.handleClick(e, origin);
   });
 
   //get things started
   $('[data-toggle="tooltip"]').tooltip();
-  cloud.start(() => oboe('/generate?' + paramString))
+  cloud.start(() => oboe('/generate' + paramString))
 
   //handle resizes
   var resizeTimer;

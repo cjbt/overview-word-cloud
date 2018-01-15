@@ -1,3 +1,6 @@
+const jQuery = require('./vendor/jquery')
+const escapeHtml = require('escape-html')
+
 export default class EraserMode {
   constructor(cloud, $hiddenWordsButton, $hiddenWordsDiv, $hiddenCounter) {
     this.cloud = cloud;
@@ -17,15 +20,15 @@ export default class EraserMode {
   }
 
   handleInclusionChange(excludedArr) {
-    var excludedListHTML = excludedArr.reduce(function(prev, word) {
-      return '<li>' + word + '</li>' + prev;
-    }, "");
+    const excludedListHtml = excludedArr
+      .map(word => `<li>${escapeHtml(word)}</li>`)
+      .join('')
     this.$hiddenWordsDiv[excludedArr.length ? "addClass" : "removeClass"]('hasHidden');
     this.$hiddenCounter.html(excludedArr.length);
-    this.$hiddenWordsDiv.find('ul').html(excludedListHTML);
+    this.$hiddenWordsDiv.find('ul').html(excludedListHtml);
   }
 
-  handleClick(e, server, $container) {
+  handleClick(e, origin, $container) {
     if(e.target === this.$hiddenWordsButton.get(0)) {
       this.$hiddenWordsDiv.toggle();
     }
@@ -39,11 +42,10 @@ export default class EraserMode {
     }
 
     else {
-      var text = e.target.textContent
-        , $target = $(e.target)
-        , offset = $target.offset();
+      const text = e.target.textContent
+      const $target = jQuery(e.target)
 
-      $(e.target)
+      $target
         .animate({
           'font-size': '0px',
           'height': '0px',
