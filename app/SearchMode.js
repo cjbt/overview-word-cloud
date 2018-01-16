@@ -14,7 +14,7 @@ export default class SearchMode {
   }
 
   handleClick(e, origin) {
-    if(e.target.tagName.toLowerCase() !== 'text') {  
+    if (e.target.tagName.toLowerCase() !== 'text') {  
       window.parent.postMessage({
         call: 'setDocumentListParams',
         args: [{}]
@@ -23,9 +23,7 @@ export default class SearchMode {
       this.$container
         .removeClass('with-selection')
         .find('.active').attr('class', '');
-    }
-
-    else {
+    } else {
       //postMessage first, so overview can start searching.
       var term = e.target.textContent;
       window.parent.postMessage({

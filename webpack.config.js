@@ -19,6 +19,24 @@ module.exports = {
         }],
       },
       {
+        test: /\.js$/,
+        exclude: /\bnode_modules\b/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: [ [ 'env', {
+              targets: {
+                browsers: 'since 2017',
+              },
+            } ] ],
+          },
+        },
+      },
+      {
+        test: /\.woff2$/,
+        use: 'base64-inline-loader',
+      },
+      {
         test: /\.css$/,
         use: ExtractTextPlugin.extract({
           fallback: 'style-loader',

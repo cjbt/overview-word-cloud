@@ -1,5 +1,7 @@
-import d3 from './vendor/d3'
+import * as d3 from 'd3'
+import d3BBoxCollide from './bbox-collide'
 import {polarToCartesian, cartesianToPolar, offsetsToCartesian, cartesianToOffsets, distance} from './utils'
+import TextMeasurer from './TextMeasurer'
 
 // Kick off the font loading. (Right now we're not using this for anything, bc
 // we're generating the cloud based on rough estimates of how much space
@@ -11,49 +13,81 @@ require('webfontloader').load({
 })
 
 class CloudLayout {
-  constructor(friction = .9) {
-    this.layout = d3.layout.force()
-      .friction(friction)
-      .gravity(0)
-      .charge(0)
-      .on('tick', this._tick.bind(this))
-
-    this.percentComplete = 0;
-
-    this.fontScale = d3.scale.linear()
-      .domain([1, Infinity])
-      .range([10, 54]);
-
-    //so we can interpolate font-size changes.
-    this.oldFontScale = d3.scale.linear()
-      .domain([1, Infinity])
-      .range([10, 54]);
-
-    this.toCenterScale = d3.scale.sqrt()
-      .domain([1, Infinity])
-      .range([0, 1]);
+  constructor(velocityDecay = .92, alphaDecay = 0.9) {
+    this.textMeasurer = new TextMeasurer()
+    this.percentComplete = 0
 
     this.container = null;
     this.containerSvgElm = null;
     this.containerGElm   = null;
+
+    let nOutputs = 0
+
+    const bboxCollide = d3BBoxCollide(node => {
+      const w_2 = node.svgWidth * node.scale * 0.5 + 3
+      const h_2 = node.svgHeight * node.scale * 0.5 + 3
+      return [
+        [ -w_2, -h_2 ],
+        [ w_2, h_2 ],
+      ]
+    })
+      .strength(0.2)
+      .iterations(3)
+
+    const boundsForce = (alpha) => {
+      if (!this.container) return
+
+      const w = this.container.clientWidth
+      const h = this.container.clientHeight
+
+      // adjusts vx and vy so each node should end within bounds
+
+      const nodes = this.layout.nodes()
+      for (const node of nodes) {
+        const w_2 = node.svgWidth * node.scale * 0.5 + 3
+        const h_2 = node.svgHeight * node.scale * 0.5 + 3
+        // bounds
+        const x0 = w_2
+        const y0 = h_2
+        const x1 = w - w_2
+        const y1 = h - h_2
+        const x = node.x
+        const y = node.y
+        const vx = node.vx
+        const vy = node.vy
+        if (x + vx < x0) {
+          // divide by velocityDecay because d3 is about to multiply by it
+          node.vx = (x0 - x) / velocityDecay
+        }
+        if (x + vx > x1) {
+          node.vx = (x1 - x) / velocityDecay
+        }
+        if (y + vy < y0) {
+          node.vy = (y0 - y) / velocityDecay
+        }
+        if (y + vy > y1) {
+          node.vy = (y1 - y) / velocityDecay
+        }
+      }
+    }
+
+    this.centerX = d3.forceX().strength(0.2)
+    this.centerY = d3.forceY().strength(0.1)
+
+    this.layout = d3.forceSimulation()
+      .force('bounds', boundsForce)
+      .force('centerX', this.centerX)
+      .force('centerY', this.centerY)
+      .force('collide', bboxCollide)
+      .velocityDecay(velocityDecay)
+      .on('tick', () => this._tick())
   }
 
   setContainer(container) {
-    if(container != this.container) {
+    if (container != this.container) {
       this.container = container;
       this.containerSvgElm = d3.select(container).append('svg');
-      this.containerGElm   = this.containerSvgElm.append('g');
-    }
-  }
-
-  setSize(size) {
-    var currSize = this.layout.size();
-
-    if(size[0] != currSize[0] || size[1] != currSize[1]) {
-      this.layout.size(size);
-      this.container.style.width = size[0] + 'px';
-      this.container.style.height = size[1] + 'px';
-      this.containerSvgElm.attr('width', size[0]).attr('height', size[1]);
+      this.containerGElm = this.containerSvgElm.append('g');
     }
   }
 
@@ -62,319 +96,133 @@ class CloudLayout {
   }
 
   setTokens(tokens) {
-    var size = this.layout.size()
-      , center = size.map((it) => it/2)
-      , xAccessor = d => d.x, yAccessor = d => d.y
-      , nodes, oldNodePositions;
+    if (!this.container) return
 
-    var tokensArray = tokens.map((t) => ({ text: t.name, value: t.frequency }))
-      , tokensArrayLen = tokensArray.length
-      , minValue = Infinity, maxValue = 0, nTokensToShow = 0
-      , tokenArea = 0, goalArea = .48*size[0]*size[1];
+    const w = this.container.clientWidth
+    const h = this.container.clientHeight
+    const center = [ w * 0.5, h * 0.5 ]
 
-    var getTokenArea = (token) => {
-      var tokenSize = this.nodeHelpers.visualSize(token, this.fontScale);
-      return tokenSize[0]*tokenSize[1];
-    }
+    const frequencies = tokens.map(t => t.frequency)
+    const minFrequency = Math.min(...frequencies)
+    const maxFrequency = Math.max(...frequencies)
 
-    //put the current scale's values into oldFontScale
-    this.oldFontScale.domain(this.fontScale.domain());
+    const textScale = d3.scalePow()
+      .exponent(0.6)
+      .domain([ minFrequency, maxFrequency ])
+      .range([ 0.1, 1 ])
 
-    //figure out how many tokens to include now, and the new scale.
-    while(tokenArea < goalArea && nTokensToShow < tokensArrayLen) {
-      let potentialToken = tokensArray[nTokensToShow];
-      let doScalesUpdate = false;
+    const toCenterScale = d3.scaleLinear()
+      .domain([ minFrequency, maxFrequency ])
+      .range([ 1, 0.00001 ])
 
-      if(potentialToken.value > maxValue) {
-        maxValue = potentialToken.value;
-        doScalesUpdate = true;
-      }
+    // text => node
+    const textToExistingNode = this.layout.nodes()
+      .reduce((acc, node) => { acc[node.text] = node; return acc }, {})
 
-      if(potentialToken.value < minValue) {
-        minValue = potentialToken.value;
-        doScalesUpdate = true;
-      }
+    const measures = this.textMeasurer.measureTexts(tokens.map(t => t.name))
 
-      if(doScalesUpdate) {
-        this.fontScale.domain([minValue, maxValue]);
-        this.toCenterScale.domain([minValue, maxValue]);
-        //recalculate tokenArea at new scales.
-        tokenArea = 0;
-        for(var i = 0; i < nTokensToShow; i++) {
-          tokenArea += getTokenArea(tokensArray[i]);
+    const nodes = tokens
+      .map((token, i) => {
+        let ret
+
+        if (textToExistingNode.hasOwnProperty(token.name)) {
+          ret = textToExistingNode[token.name]
+        } else {
+          ret = { text: token.name }
+
+          // This token hasn't been placed, ever. Give it an initial position.
+          const angle = 2 * Math.PI / 360 * (hashString(token.name) % 360)
+          const distanceToEdgeAtAngle = distanceFromCenterToNearestEdgeAtAngle(center[0], center[1], angle)
+          const r = distanceToEdgeAtAngle * toCenterScale(token.frequency)
+          const xy = cartesianToOffsets(polarToCartesian([ r, angle ]), center)
+          ret.x = xy[0]
+          ret.y = xy[1]
+
+          // Also, measure its size. We _scale_ the <text> after placing it, but
+          // _font size_ is constant.
+          ret.svgWidth = measures[i].width
+          ret.svgHeight = measures[i].height
         }
-      }
-      else {
-        nTokensToShow += 1;
-        tokenArea += getTokenArea(potentialToken);
-      }
-    }
-    tokensArray = tokensArray.slice(0, Math.ceil(nTokensToShow*this.percentComplete));
 
-    // Save the [x, y] of the existing nodes into an object,
-    // so we can keep their positions if they're still in the cloud.
-    oldNodePositions = this.layout.nodes().reduce((prev, d) => {
-      prev[d.text] = [d.x, d.y];
-      return prev;
-    }, {});
+        ret.value = token.frequency           // it changes
+        ret.scale = textScale(ret.value) // store it: we refer to it often
 
-    // Build the new nodes.
-    nodes = tokensArray.map((node, i) => {
-      // Use the word's existing position if possible
-      if(oldNodePositions[node.text]) {
-        [node.x, node.y] = oldNodePositions[node.text]
-      }
+        return ret
+      })
 
-      // Otherwise, generate initial position for the node.
-      else {
-        let angle = 2*Math.PI*((hashString(node.text) % 360)/360);
-
-        let distanceToEdgeAtAngle =
-          distanceFromCenterToNearestEdgeAtAngle(center[0], center[1], angle);
-
-        let r = distanceToEdgeAtAngle*(1-this.toCenterScale(node.value));
-
-        [node.x, node.y] = cartesianToOffsets(polarToCartesian([r, angle]), center);
-      }
-
-      node.index = i;
-
-      return node;
-    });
-
-    // initialize the layout with these nodes
-    this.layout.nodes(nodes);
+    this._setLayoutNodes(nodes)
   }
 
-  render(container, size, tokens, percentComplete) {
-    var currSize = this.layout.size()
-      , rebuildCollisionHandler = (
-          size[0] != currSize[0] || size[1] != currSize[1] ||
-          tokens != this.tokens
-    );
+  _setLayoutNodes(nodes) {
+    if (!this.container) return
 
-    this.layout.stop();
-    this.setContainer(container);
-    this.setSize(size);
-    this.setPercentComplete(percentComplete);
-    this.setTokens(tokens);
+    const w = this.w = this.container.clientWidth
+    const h = this.h = this.container.clientHeight
 
-    //must do this after setTokens, as that updates toCenterScale.
-    if(rebuildCollisionHandler) {
-      this._collisionFreeCompactor = this.nodeHelpers.collisionFreeCompactor(
-        this.layout.nodes(),
-        8,
-        this.toCenterScale.domain()[1],
-        size,
-        this
-      );
-    }
+    this.centerX.x(w * 0.5)
+    this.centerY.y(h * 0.5)
 
-    this.layout.start();
-  }
-
-  _tick(event) {
-    var size = this.layout.size()
-      , nodes = this.layout.nodes()
-      , alpha = event.alpha
-      , interpolatedScale = (d) => (1-10*alpha)*this.fontScale(d) + 10*alpha*this.oldFontScale(d)
-      , buffer = 8;
-
-    nodes.forEach((d, i) => {
-      //prevent collisions
-      this._collisionFreeCompactor(d, alpha, interpolatedScale);
-
-      //enforce a hard bounding so nothing escapes
-      var nodeSize = this.nodeHelpers.visualSize(d, interpolatedScale);
-      var thisBufferX = buffer + nodeSize[0]/2;
-      var thisBufferY = buffer + nodeSize[1];
-      d.x = Math.max(thisBufferX, Math.min(size[0] - thisBufferX, d.x));
-      d.y = Math.max(thisBufferY, Math.min(size[1] - thisBufferY, d.y));
-    });
-
-    this._draw(alpha, interpolatedScale);
-  }
-
-  _draw(alpha, interpolatedScale) {
-    var fontStack = "'Open Sans', Helvetica, Arial, sans-serif"
-      , nodes = this.layout.nodes()
-      , fontSizer = this.nodeHelpers.fontSize.bind(null, interpolatedScale);
-
-    var text = this.containerGElm.selectAll('text')
-      .data(nodes, this.nodeHelpers.text);
+    const text = this.containerGElm.selectAll('text')
+      .data(nodes, d => d.text)
 
     // Adjust existing words
     text
+      .attr('fill', this.nodeHelpers.color)
       .attr('transform', this.nodeHelpers.transform)
-      .style('font-size', fontSizer)
-      .style('fill', this.nodeHelpers.color);
 
     // Add new words
     text.enter().append('text')
+      .text(d => d.text)
       .attr('transform', this.nodeHelpers.transform)
-      .text(this.nodeHelpers.text)
+      .attr('fill', this.nodeHelpers.color)
       .attr('text-anchor', 'middle')
-      .style('font-family', fontStack)
-      .style('font-size', fontSizer)
-      .style('fill', this.nodeHelpers.color)
-      .style('opacity', 1);
-
-    var exitGroup = this.containerSvgElm.append('g')
-      .attr('transform', this.containerGElm.attr('transform'));
-
-    var exitGroupNode = exitGroup.node();
+      .attr('alignment-baseline', 'central')
+      .style('opacity', 1)
 
     // Remove old words
+    const exitNodes = []
     text.exit()
-      .each(function() { exitGroupNode.appendChild(this); });
+      .each(function() { exitNodes.push(this) })
+    if (exitNodes.length > 0) {
+      const exitG = this.containerSvgElm.append('g')
+      const exitGNode = exitG.node()
+      exitNodes.forEach(node => exitGNode.appendChild(node))
+      console.log(exitGNode.innerHTML)
+      exitG.transition()
+        .duration(200)
+        .style('opacity', 0)
+        .remove()
+    }
 
-    exitGroup.transition()
-      .duration(500)
-      .style('opacity', 0)
-      .remove();
+    console.log(nodes.length, this.containerGElm.node())
+    console.log(nodes.length, this.containerGElm.node().childNodes.length)
+
+    this.layout.nodes(nodes) // now wait for calls to _tick()
+  }
+
+  render(container, tokens, percentComplete) {
+    this.setContainer(container)
+    this.setPercentComplete(percentComplete)
+    this.setTokens(tokens)
+
+    this.layout.alpha(1).restart()
+  }
+
+  _tick() {
+    if (!this.container) return
+
+    const text = this.containerGElm.selectAll('text')
+
+    text.attr('transform', this.nodeHelpers.transform)
   }
 }
 
 CloudLayout.prototype.nodeHelpers = {
-  transform:  function(d)    { return "translate(" + [d.x || 0, d.y || 0] + ")"; },
-  text:       function(d)    { return d.text; },
-  color:      function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; },
-  fontSize:   function(fontScale, d) { return fontScale(d.value) + 'px'; },
-  visualSize: function(d, fontScale, leading = 1.4) {
-    return [d.text.length*fontScale(d.value)*.55, fontScale(d.value)*leading];
+  transform: function(d) {
+    return `translate(${d.x || 0}, ${d.y || 0}) scale(${d.scale || 0})`
   },
-  collisionFreeCompactor: function(nodes, padding, maxImportance, canvasSize, self) {
-    var offsets = (node, fontScale) => {
-      var size = this.visualSize(node, fontScale);
-      return {
-        left: node.x - size[0]/2 - padding,
-        right: node.x + size[0]/2 + padding,
-        top: node.y - size[1]*.75 - padding,    //.75 and .25 are an adjustment for
-        bottom: node.y + size[1]*.25 + padding, //descenders, as .y refers to text-bottom.
-      };
-    };
-
-    var center = (offsets) => [
-      offsets.left + (offsets.right-offsets.left)/2,
-      offsets.top + (offsets.bottom - offsets.top)/2
-    ];
-
-    return function(d, alpha, fontScale) {
-      var nodeOffsets = offsets(d, fontScale), i, len;
-
-      // This function (when it's used in a loop over all nodes) O(n^2).
-      // A quadtree would be O(nlog(n)), but it doesn't work well (without more
-      // sophistication, anyway) because the node's position as a point bears
-      // little relation to its real position as a rectangle on screen.
-      for(i = 0, len = nodes.length; i < len; i++) {
-        let currNode = nodes[i];
-        if(currNode !== d) {
-          let currOffsets = offsets(currNode, fontScale);
-          let topNode  = nodeOffsets.top <= currOffsets.top ? d : currNode;
-          let leftNode = nodeOffsets.left <= currOffsets.left ? d : currNode;
-
-          // This is the (top node's bottom - the bottom node's top), i.e. how
-          // much you would need to move the top node up (or the bottom node down)
-          // to end the overlap. A negative value means there's no overlap.
-          let overlapY = (topNode === d ?
-            nodeOffsets.bottom - currOffsets.top :
-            currOffsets.bottom - nodeOffsets.top
-          );
-
-          // The equivalent calculation for x: how much we need to move
-          // the left node left (or the right node right) to end the overlap.
-          let overlapX = (leftNode === d ?
-            nodeOffsets.right - currOffsets.left :
-            currOffsets.right - nodeOffsets.left
-          );
-
-          // Two points overlap only if they overlap in both x and y.
-          if(overlapX >= 0 && overlapY >= 0) {
-            // To end the collision, we're going to we're going to move
-            // the nodes along the dimension that requires less displacement.
-            // It's tempting to try to only move one of the colliding nodes,
-            // e.g. only the one with the lower value, but doing this seems to
-            // bias the node placement so the whole graph ends up moving away
-            // from the center.
-            let dimension = overlapY < overlapX ? 'y' : 'x';
-            let shifts = {
-              'x': overlapX*(d === leftNode ? -1 : 1),
-              'y': overlapY*(d === topNode ? -1 : 1)
-            }
-
-            //1.4 here is a "magic value", balancing the strength of the
-            //repulsion, to make sure collisions actually end up being avoided,
-            //with the need to not introduce new collisions with our adjustment.
-            let shift = (1.4*alpha)*shifts[dimension]/2;
-
-            d[dimension] += shift;
-            currNode[dimension] -= shift;
-
-            //keep nodeOffsets in sync.
-            if(dimension == 'x') {
-              nodeOffsets.left += shift;
-              nodeOffsets.right += shift;
-            }
-            else {
-              nodeOffsets.top += shift;
-              nodeOffsets.bottom += shift;
-            }
-          }
-
-          // If the points don't overlap, pull them together.
-          else {
-            let nodeCenter = center(nodeOffsets);
-            let currCenter = center(currOffsets);
-            let nodeWidth  = (nodeOffsets.right - nodeOffsets.left)/2;
-            let currWidth  = (currOffsets.right - currOffsets.left)/2;
-            let nodeHeight = (nodeOffsets.bottom - nodeOffsets.top)/2;
-            let currHeight = (currOffsets.bottom - currOffsets.top)/2;
-
-            // Find the line segment between the two centroids, and capture it
-            // as the distance & angle between them relative to nodeCentroid.
-            let [r, angle] = cartesianToPolar(
-              offsetsToCartesian(currCenter, nodeCenter)
-            );
-
-            // Now, of that line segment of length r, we don't want to count
-            // parts that are contained within either word's bounds, as we're
-            // moving them together only to the extent that they don't overlap.
-            // So, we find the distance from each word's centroid to its nearest
-            // edge along angle, and we subtract those distances from r.
-            let nodeDistanceToNearestEdge =
-              distanceFromCenterToNearestEdgeAtAngle(nodeWidth, nodeHeight, angle);
-
-            let currDistanceToNearestEdge =
-              distanceFromCenterToNearestEdgeAtAngle(currWidth, currHeight, angle);
-
-            let distanceToMove =
-              r - currDistanceToNearestEdge - nodeDistanceToNearestEdge;
-
-            //.00038 here is a magic value balancing compactness against
-            //introducing more collisions, as is 1.4 below. Making the shifts
-            //proportional to alpha^1.4 instead of just alpha means that the
-            //collision avoidance shifts (which are proportional just to alpha)
-            //becomes more dominant in the later iterations.
-            let strength  = .00038*Math.sqrt(d.value*currNode.value)/maxImportance;
-            let distanceX = distanceToMove*Math.cos(angle)*Math.pow(alpha, 1.4)*strength;
-            let distanceY = distanceToMove*Math.sin(angle)*Math.pow(alpha, 1.4)*strength;
-
-            d.y -= distanceY;
-            d.x += distanceX;
-
-            currNode.x -= distanceX;
-            currNode.y += distanceY;
-
-            nodeOffsets.top -= distanceY;
-            nodeOffsets.bottom -= distanceY;
-            nodeOffsets.left += distanceX;
-            nodeOffsets.right += distanceX;
-          }
-        }
-      }
-    };
-  }
-};
+  color: function(d, i) { return 'hsl('+ Math.floor(i % 360) + ', 80%, 35%)'; },
+}
 
 function distanceFromCenterToNearestEdgeAtAngle(canvasWidth, canvasHeight, angle) {
   return Math.min(

@@ -18,7 +18,13 @@
     "overview-js-token-bin": "0.0.5"
   },
   "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-env": "^1.6.1",
+    "base64-inline-loader": "^1.1.0",
     "css-loader": "^0.28.8",
+    "d3": "^4.12.2",
+    "d3-bboxCollide": "^1.0.4",
     "escape-html": "^1.0.3",
     "expose-loader": "^0.7.4",
     "extract-text-webpack-plugin": "^3.0.2",

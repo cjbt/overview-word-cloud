@@ -13,7 +13,11 @@ export default class OverviewWordCloud {
 
   _dispatch(ev, ...args) {
     if (this.listeners[ev] instanceof Array) {
-      this.listeners[ev].forEach(listener => listener.apply(this, args))
+      try {
+        this.listeners[ev].forEach(listener => listener.apply(this, args))
+      } catch (e) {
+        console.error(e)
+      }
     }
   }
 
@@ -28,7 +32,8 @@ export default class OverviewWordCloud {
   }
 
   getTokens() {
-    return this.tokens.filter((token) => !this.excluded.hasOwnProperty(token.name))
+    return this.tokens
+      .filter(token => !this.excluded.hasOwnProperty(token.name))
   }
 
   updateProgress(newProgress) {
@@ -39,26 +44,27 @@ export default class OverviewWordCloud {
   }
 
   setExcludedWords(exclude) {
-    this.excluded = {};
-    this.excludedKeysOrdered = exclude.slice();
-    exclude.forEach((word) => this.excluded[word] = null);
+    this.excluded = {}
+    this.excludedKeysOrdered = exclude.slice()
+    exclude.forEach(word => this.excluded[word] = null)
+    console.log(this.excluded, this.excludedKeysOrdered)
 
-    this._dispatch("inclusionchange", this.excludedKeysOrdered);
+    this._dispatch("inclusionchange", this.excludedKeysOrdered)
   }
 
   includeWord(word) {
     if (this.excluded.hasOwnProperty(word)) {
-      delete this.excluded[word];
-      this.excludedKeysOrdered.splice(this.excludedKeysOrdered.indexOf(word), 1);
-      this._dispatch("inclusionchange", this.excludedKeysOrdered);
+      delete this.excluded[word]
+      this.excludedKeysOrdered.splice(this.excludedKeysOrdered.indexOf(word), 1)
+      this._dispatch("inclusionchange", this.excludedKeysOrdered)
     }
   }
 
   excludeWord(word) {
     if (!this.excluded.hasOwnProperty(word)) {
-      this.excluded[word] = null;
-      this.excludedKeysOrdered.push(word);
-      this._dispatch("inclusionchange", this.excludedKeysOrdered);
+      this.excluded[word] = null
+      this.excludedKeysOrdered.push(word)
+      this._dispatch("inclusionchange", this.excludedKeysOrdered)
     }
   }
 }

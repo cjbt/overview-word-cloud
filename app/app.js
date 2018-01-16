@@ -12,14 +12,15 @@ import Tooltip from './vendor/bootstrap.tooltip'
 export default function(paramString, server, origin) {
   var $window    = $(window)
     , $html      = $('html')
-    , $container = $('#cloud-container')
     , $progress  = $('progress');
+
+  const cloudContainer = document.querySelector('#cloud-container')
 
   //generate our objects and hook up various event listeners
   var cloud  = new Cloud()
     , layout = new CloudLayout()
     , modeSwitcher = new ModeSwitcher([{
-          "mode": new SearchMode(cloud, $container),
+          "mode": new SearchMode(cloud, $(cloudContainer)),
           "control": $('#search-btn'),
           "default": true
         }, {
@@ -29,30 +30,30 @@ export default function(paramString, server, origin) {
       ]);
 
   cloud.observe("progress", function(newProgress) {
-    $progress.attr('value', newProgress);
-    render();
-  });
+    $progress.attr('value', newProgress)
+    render()
+  })
 
   cloud.observe("done", function() {
     // hide words from before. do this on done because the system
     // will get confused if we try to hide a word before its loaded.
-    oboe('/hidden-tokens' + paramString).done((it) => {
-      cloud.setExcludedWords(it["hidden-tokens"]); 
+    oboe('/hidden-tokens' + paramString).done(it => {
+      cloud.setExcludedWords(it["hidden-tokens"]);
     });
-    $progress.remove();
-    render();
-  });
+    $progress.remove()
+    render()
+  })
 
   cloud.observe("inclusionchange", function(excludedArr) {
-    var eraserMode = modeSwitcher.modesMap["eraser-mode"].mode;
-    render();
+    var eraserMode = modeSwitcher.modesMap["eraser-mode"].mode
+    render()
     oboe({
       "url": "/hidden-tokens" + paramString, 
       "method": "PUT", 
       "body": {"hidden-tokens": excludedArr} 
-    });
+    })
     eraserMode.handleInclusionChange(excludedArr);
-  });
+  })
 
   $html.click((e) => { 
     modeSwitcher.currentMode.handleClick(e, origin);
@@ -63,16 +64,18 @@ export default function(paramString, server, origin) {
   cloud.start(() => oboe('/generate' + paramString))
 
   //handle resizes
-  var resizeTimer;
-  $window.resize(function() {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(render, 100);
-  });
+  let resizeTimer = null
+  window.addEventListener('resize', () => {
+    if (resizeTimer) return
+    resizeTimer = setTimeout(() => {
+      render()
+      resizeTimer = null
+    }, 100)
+  })
 
   function render() {
     layout.render(
-      $container[0],
-      [parseInt($window.width(), 10), parseInt($window.height(), 10)],
+      cloudContainer,
       cloud.getTokens(), 
       cloud.progress
     );
