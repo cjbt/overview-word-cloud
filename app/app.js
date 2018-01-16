@@ -1,7 +1,7 @@
 import css from './show.css'
 
-import $ from './vendor/jquery'
-import oboe from './vendor/oboe-browser'
+import $ from 'jquery'
+import oboe from 'oboe'
 import Cloud from './OverviewWordCloud'
 import CloudLayout from './CloudLayout'
 import SearchMode from './SearchMode'
@@ -35,24 +35,27 @@ export default function(paramString, server, origin) {
   })
 
   cloud.observe("done", function() {
-    // hide words from before. do this on done because the system
-    // will get confused if we try to hide a word before its loaded.
-    oboe('/hidden-tokens' + paramString).done(it => {
-      cloud.setExcludedWords(it["hidden-tokens"]);
-    });
     $progress.remove()
     render()
+
+    fetch('/hidden-tokens' + paramString)
+      .then(response => response.json())
+      .then(it => cloud.setExcludedWords(it['hidden-tokens'] || []))
+      .catch(err => console.error(err))
   })
 
   cloud.observe("inclusionchange", function(excludedArr) {
     var eraserMode = modeSwitcher.modesMap["eraser-mode"].mode
-    render()
-    oboe({
-      "url": "/hidden-tokens" + paramString, 
-      "method": "PUT", 
-      "body": {"hidden-tokens": excludedArr} 
-    })
     eraserMode.handleInclusionChange(excludedArr);
+
+    render()
+
+    fetch('/hidden-tokens' + paramString, {
+      method: 'PUT',
+      body: JSON.stringify({ 'hidden-tokens': excludedArr }),
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+    })
+      .catch(err => console.error(err))
   })
 
   $html.click((e) => { 

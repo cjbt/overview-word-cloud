@@ -3,15 +3,6 @@ import d3BBoxCollide from './bbox-collide'
 import {polarToCartesian, cartesianToPolar, offsetsToCartesian, cartesianToOffsets, distance} from './utils'
 import TextMeasurer from './TextMeasurer'
 
-// Kick off the font loading. (Right now we're not using this for anything, bc
-// we're generating the cloud based on rough estimates of how much space
-// each word will take up, rather than typesetting it and measuring
-// the actual space. See CloudLayout.prototype.nodeHelpers.visualSize).
-require('webfontloader').load({
-  google: {families: ['Open Sans:400,700']},
-  timeout: 5000,
-})
-
 class CloudLayout {
   constructor(velocityDecay = .92, alphaDecay = 0.9) {
     this.textMeasurer = new TextMeasurer()
@@ -31,7 +22,7 @@ class CloudLayout {
         [ w_2, h_2 ],
       ]
     })
-      .strength(0.2)
+      .strength(0.3)
       .iterations(3)
 
     const boundsForce = (alpha) => {
@@ -187,15 +178,11 @@ class CloudLayout {
       const exitG = this.containerSvgElm.append('g')
       const exitGNode = exitG.node()
       exitNodes.forEach(node => exitGNode.appendChild(node))
-      console.log(exitGNode.innerHTML)
       exitG.transition()
         .duration(200)
         .style('opacity', 0)
         .remove()
     }
-
-    console.log(nodes.length, this.containerGElm.node())
-    console.log(nodes.length, this.containerGElm.node().childNodes.length)
 
     this.layout.nodes(nodes) // now wait for calls to _tick()
   }

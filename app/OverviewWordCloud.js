@@ -1,3 +1,5 @@
+import oboe from 'oboe'
+
 export default class OverviewWordCloud {
   constructor() {
     this.progress = 0
@@ -47,7 +49,6 @@ export default class OverviewWordCloud {
     this.excluded = {}
     this.excludedKeysOrdered = exclude.slice()
     exclude.forEach(word => this.excluded[word] = null)
-    console.log(this.excluded, this.excludedKeysOrdered)
 
     this._dispatch("inclusionchange", this.excludedKeysOrdered)
   }
