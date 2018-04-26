@@ -11,27 +11,27 @@
   },
   "dependencies": {
     "body-parser": "^1.12.0",
-    "express": "^4.16.2",
+    "express": "^4.16.3",
     "morgan": "^1.5.0",
     "oboe": "^2.1.4",
     "overview-api-node": "2.x.x",
     "overview-js-token-bin": "0.0.5"
   },
   "devDependencies": {
-    "babel-core": "^6.26.0",
-    "babel-loader": "^7.1.2",
+    "babel-core": "^6.26.2",
+    "babel-loader": "^7.1.4",
     "babel-preset-env": "^1.6.1",
-    "base64-inline-loader": "^1.1.0",
-    "css-loader": "^0.28.8",
-    "d3": "^4.12.2",
+    "base64-inline-loader": "^1.1.1",
+    "css-loader": "^0.28.11",
+    "d3": "^4.13.0",
     "d3-bboxCollide": "^1.0.4",
     "escape-html": "^1.0.3",
-    "expose-loader": "^0.7.4",
+    "expose-loader": "^0.7.5",
     "extract-text-webpack-plugin": "^3.0.2",
     "html-webpack-plugin": "^2.30.1",
-    "jquery": "^3.2.1",
+    "jquery": "^3.3.1",
     "style-loader": "^0.19.1",
-    "uglifyjs-webpack-plugin": "^1.1.6",
-    "webpack": "^3.10.0"
+    "uglifyjs-webpack-plugin": "^1.2.5",
+    "webpack": "^3.11.0"
   }
 }
